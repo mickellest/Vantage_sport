@@ -1,102 +1,50 @@
 /* =====================================================
-   Base de datos en memoria (persistida en localStorage)
-   Tablas: categoria, producto, cliente, cliente_telefono,
-           orden, orden_detalle
+   Conexión a Supabase
    ===================================================== */
-const KEY = 'ecom_demo_v1';
-
-const SEED = () => ({
-  categoria: [
-    { id_categoria: 'CAT01', nombre_categoria: 'Tecnología' },
-    { id_categoria: 'CAT02', nombre_categoria: 'Hogar' },
-    { id_categoria: 'CAT03', nombre_categoria: 'Deportes' },
-    { id_categoria: 'CAT04', nombre_categoria: 'Libros' }
-  ],
-
-  // [id, nombre, precio, categoría, emoji]
-  producto: [
-    ['P001', 'Auriculares Bluetooth', 59.9, 'CAT01', '🎧'],
-    ['P002', 'Teclado mecánico', 89.5, 'CAT01', '⌨️'],
-    ['P003', 'Smartwatch', 129, 'CAT01', '⌚'],
-    ['P004', 'Lámpara de escritorio', 34.99, 'CAT02', '💡'],
-    ['P005', 'Cafetera italiana', 27.5, 'CAT02', '☕'],
-    ['P006', 'Set de sartenes', 74, 'CAT02', '🍳'],
-    ['P007', 'Balón de fútbol', 22, 'CAT03', '⚽'],
-    ['P008', 'Mat de yoga', 31.25, 'CAT03', '🧘'],
-    ['P009', 'Zapatillas running', 98, 'CAT03', '👟'],
-    ['P010', 'Novela de misterio', 14.9, 'CAT04', '📕'],
-    ['P011', 'Guía de programación', 42, 'CAT04', '📘'],
-    ['P012', 'Atlas del mundo', 36.5, 'CAT04', '🌍']
-  ].map(p => ({
-    id_producto: p[0],
-    nombre_producto: p[1],
-    precio_actual: p[2],
-    id_categoria: p[3],
-    _e: p[4] // emoji (solo visual, no es columna)
-  })),
-
-  cliente: [
-    { id_cliente: 'C001', nom1_cliente: 'María', nom2_cliente: 'José', ape1_cliente: 'Pérez', ape2_cliente: 'Rojas' },
-    { id_cliente: 'C002', nom1_cliente: 'Carlos', nom2_cliente: '', ape1_cliente: 'Gómez', ape2_cliente: 'Díaz' },
-    { id_cliente: 'C003', nom1_cliente: 'Lucía', nom2_cliente: 'Andrea', ape1_cliente: 'Soto', ape2_cliente: 'Vega' }
-  ],
-
-  cliente_telefono: [
-    { id_telefono: 'T001', id_cliente: 'C001', numero_telefono: '+56 9 1234 5678' },
-    { id_telefono: 'T002', id_cliente: 'C001', numero_telefono: '+56 2 2345 6789' },
-    { id_telefono: 'T003', id_cliente: 'C002', numero_telefono: '+56 9 8765 4321' },
-    { id_telefono: 'T004', id_cliente: 'C003', numero_telefono: '+56 9 5555 0101' }
-  ],
-
-  orden: [
-    { id_orden: 'O001', id_cliente: 'C001' },
-    { id_orden: 'O002', id_cliente: 'C002' },
-    { id_orden: 'O003', id_cliente: 'C003' }
-  ],
-
-  orden_detalle: [
-    { id_orden: 'O001', id_producto: 'P001', cantidad: 1 },
-    { id_orden: 'O001', id_producto: 'P010', cantidad: 2 },
-    { id_orden: 'O002', id_producto: 'P007', cantidad: 3 },
-    { id_orden: 'O002', id_producto: 'P008', cantidad: 1 },
-    { id_orden: 'O003', id_producto: 'P003', cantidad: 1 },
-    { id_orden: 'O003', id_producto: 'P005', cantidad: 2 },
-    { id_orden: 'O003', id_producto: 'P012', cantidad: 1 }
-  ]
-});
+const supabaseUrl = 'https://kwyycebjmdgxihbtjwqy.supabase.co';
+const supabaseKey = 'sb_publishable_XWP4yM1-sYMwkJN5s6_I3w_gWDq6gNr';
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 /* ---------- Estado de la aplicación ---------- */
-let db;
+let db = {
+  categoria: [], producto: [], cliente: [], cliente_telefono: [], orden: [], orden_detalle: []
+};
 let cart = {};      // { id_producto: cantidad }
 let view = 'tienda';
 let cat = 'ALL';
 let q = '';
 let last = null;    // última orden creada
 
-try {
-  db = JSON.parse(localStorage.getItem(KEY));
-} catch (e) { }
+// Emojis de muestra (ya que no son columnas en la BD)
+const emojis = {
+  'P001': '🎧', 'P002': '⌨️', 'P003': '⌚', 'P004': '💡', 'P005': '☕',
+  'P006': '🍳', 'P007': '⚽', 'P008': '🧘', 'P009': '👟', 'P010': '📕',
+  'P011': '📘', 'P012': '🌍'
+};
 
-if (!db || !db.producto) {
-  db = SEED();
+async function init() {
+  const app = document.querySelector('#app');
+  if (app) app.innerHTML = '<h2 style="text-align:center; padding-top:40px;">Cargando base de datos...</h2>';
+
+  const tablas = ['categoria', 'producto', 'cliente', 'cliente_telefono', 'orden', 'orden_detalle'];
+  for (const t of tablas) {
+    const { data } = await supabase.from(t).select('*');
+    if (data) db[t] = data;
+  }
+  
+  // Asignar emojis
+  db.producto.forEach(p => p._e = emojis[p.id_producto] || '📦');
+  
+  render();
 }
 
 /* ---------- Utilidades ---------- */
 const $ = s => document.querySelector(s);
 
-const save = () => {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(db));
-  } catch (e) { }
-};
-
 const money = n => '$' + Number(n).toFixed(2);
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;'
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'
 }[c]));
 
 const prod = id => db.producto.find(p => p.id_producto === id);
@@ -157,10 +105,10 @@ function render2() {
   $('#nf').style.display = $('#cs').value === 'NEW' ? 'grid' : 'none';
 }
 
-function checkout() {
+async function checkout() {
   let idc = $('#cs').value;
 
-  // Cliente nuevo: crea cliente y teléfono
+  // Cliente nuevo: crea cliente y teléfono en Supabase
   if (idc === 'NEW') {
     const n1 = $('#n1').value.trim();
     const a1 = $('#a1').value.trim();
@@ -171,46 +119,29 @@ function checkout() {
     }
 
     idc = nextId(db.cliente, 'id_cliente', 'C');
+    const newCliente = { id_cliente: idc, nom1_cliente: n1, nom2_cliente: $('#n2').value.trim(), ape1_cliente: a1, ape2_cliente: $('#a2').value.trim() };
+    
+    await supabase.from('cliente').insert([newCliente]);
+    db.cliente.push(newCliente);
 
-    db.cliente.push({
-      id_cliente: idc,
-      nom1_cliente: n1,
-      nom2_cliente: $('#n2').value.trim(),
-      ape1_cliente: a1,
-      ape2_cliente: $('#a2').value.trim()
-    });
-
-    db.cliente_telefono.push({
-      id_telefono: nextId(db.cliente_telefono, 'id_telefono', 'T'),
-      id_cliente: idc,
-      numero_telefono: tel
-    });
+    const newTel = { id_telefono: nextId(db.cliente_telefono, 'id_telefono', 'T'), id_cliente: idc, numero_telefono: tel };
+    await supabase.from('cliente_telefono').insert([newTel]);
+    db.cliente_telefono.push(newTel);
   }
 
-  // Crea la orden y sus líneas de detalle
+  // Crea la orden y sus líneas de detalle en Supabase
   const ido = nextId(db.orden, 'id_orden', 'O');
-  db.orden.push({ id_orden: ido, id_cliente: idc });
+  const newOrden = { id_orden: ido, id_cliente: idc };
+  await supabase.from('orden').insert([newOrden]);
+  db.orden.push(newOrden);
 
-  Object.entries(cart).forEach(([id, n]) => {
-    db.orden_detalle.push({ id_orden: ido, id_producto: id, cantidad: n });
-  });
+  const detalles = Object.entries(cart).map(([id, n]) => ({ id_orden: ido, id_producto: id, cantidad: n }));
+  await supabase.from('orden_detalle').insert(detalles);
+  detalles.forEach(d => db.orden_detalle.push(d));
 
   cart = {};
   last = ido;
-  save();
   render();
-}
-
-function copySql() {
-  try {
-    navigator.clipboard.writeText(sql());
-    toast('SQL copiado');
-  } catch (e) {
-    const r = document.createRange();
-    r.selectNode($('#sql'));
-    getSelection().removeAllRanges();
-    getSelection().addRange(r);
-  }
 }
 
 /* =====================================================
@@ -220,8 +151,7 @@ function renderNav() {
   const tabs = [
     ['tienda', 'Tienda'],
     ['carrito', 'Carrito'],
-    ['ordenes', 'Órdenes'],
-    ['bd', 'Base de datos']
+    ['ordenes', 'Órdenes']
   ];
 
   $('#nav').innerHTML = tabs.map(([k, l]) => `
@@ -273,12 +203,10 @@ function vTienda() {
 
 /* ---------- Carrito ---------- */
 function vCarrito() {
-  // Confirmación tras comprar
   if (last) {
     return `
       <div class="panel">
-        <h2 class="ok">✔ Orden ${last} creada</h2>
-        <p>Se guardó en las tablas <code>orden</code> y <code>orden_detalle</code>.</p>
+        <h2 class="ok">✔ Orden ${last} creada exitosamente en Supabase</h2>
         <button class="btn" onclick="last=null; go('ordenes')">Ver órdenes</button>
         <button class="btn sec" onclick="last=null; go('tienda')">Seguir comprando</button>
       </div>
@@ -287,7 +215,6 @@ function vCarrito() {
 
   const ids = Object.keys(cart);
 
-  // Carrito vacío
   if (!ids.length) {
     return `
       <h2>Carrito</h2>
@@ -393,98 +320,6 @@ function vOrdenes() {
   return `<h2>Órdenes</h2>${orders}`;
 }
 
-/* ---------- Base de datos ---------- */
-const TABLAS = ['categoria', 'producto', 'cliente', 'cliente_telefono', 'orden', 'orden_detalle'];
-
-const DDL = `CREATE TABLE categoria (
-  id_categoria TEXT PRIMARY KEY,
-  nombre_categoria TEXT NOT NULL
-);
-CREATE TABLE producto (
-  id_producto TEXT PRIMARY KEY,
-  nombre_producto TEXT NOT NULL,
-  precio_actual NUMERIC NOT NULL,
-  id_categoria TEXT REFERENCES categoria(id_categoria)
-);
-CREATE TABLE cliente (
-  id_cliente TEXT PRIMARY KEY,
-  nom1_cliente TEXT NOT NULL,
-  nom2_cliente TEXT,
-  ape1_cliente TEXT NOT NULL,
-  ape2_cliente TEXT
-);
-CREATE TABLE cliente_telefono (
-  id_telefono TEXT PRIMARY KEY,
-  id_cliente TEXT REFERENCES cliente(id_cliente),
-  numero_telefono TEXT NOT NULL
-);
-CREATE TABLE orden (
-  id_orden TEXT PRIMARY KEY,
-  id_cliente TEXT REFERENCES cliente(id_cliente)
-);
-CREATE TABLE orden_detalle (
-  id_orden TEXT REFERENCES orden(id_orden),
-  id_producto TEXT REFERENCES producto(id_producto),
-  cantidad INT4 NOT NULL,
-  PRIMARY KEY (id_orden, id_producto)
-);
-`;
-
-// Columnas reales de una fila (ignora las que empiezan con "_")
-const columnas = row => Object.keys(row).filter(k => k[0] !== '_');
-
-function sql() {
-  const val = x => typeof x === 'number'
-    ? x
-    : "'" + String(x).replace(/'/g, "''") + "'";
-
-  let s = DDL + '\n';
-
-  TABLAS.forEach(t => {
-    db[t].forEach(r => {
-      const k = columnas(r);
-      s += `INSERT INTO ${t} (${k.join(', ')}) VALUES (${k.map(c => val(r[c])).join(', ')});\n`;
-    });
-    s += '\n';
-  });
-
-  return s;
-}
-
-function vBd() {
-  const tablas = TABLAS.map(t => {
-    const k = columnas(db[t][0] || {});
-    return `
-      <div class="panel">
-        <b>${t}</b> <span class="mu">(${db[t].length} filas)</span>
-        <div class="scroll">
-          <table>
-            <tr>${k.map(c => `<th>${c}</th>`).join('')}</tr>
-            ${db[t].map(r => `<tr>${k.map(c => `<td>${esc(r[c])}</td>`).join('')}</tr>`).join('')}
-          </table>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  return `
-    <h2>Base de datos</h2>
-
-    <div class="row" style="justify-content:flex-start; margin-bottom:14px">
-      <button class="btn" onclick="copySql()">Copiar SQL</button>
-      <button class="btn sec"
-              onclick="if (confirm('¿Restaurar datos de ejemplo?')) { db = SEED(); cart = {}; save(); render(); }">
-        Restaurar ejemplo
-      </button>
-    </div>
-
-    ${tablas}
-
-    <h2>Script SQL (PostgreSQL)</h2>
-    <pre id="sql">${esc(sql())}</pre>
-  `;
-}
-
 /* ---------- Render principal ---------- */
 function render() {
   renderNav();
@@ -492,8 +327,7 @@ function render() {
   $('#app').innerHTML = {
     tienda: vTienda,
     carrito: vCarrito,
-    ordenes: vOrdenes,
-    bd: vBd
+    ordenes: vOrdenes
   }[view]();
 
   if (view === 'carrito' && !last && Object.keys(cart).length) {
@@ -501,4 +335,5 @@ function render() {
   }
 }
 
-render();
+// Inicializar la conexión y descargar datos antes de renderizar
+init();
