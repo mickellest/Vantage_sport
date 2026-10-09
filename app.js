@@ -1,9 +1,7 @@
-/* =====================================================
-   Conexión a Supabase
-   ===================================================== */
+
 const supabaseUrl = 'https://kwyycebjmdgxihbtjwqy.supabase.co';
 const supabaseKey = 'sb_publishable_XWP4yM1-sYMwkJN5s6_I3w_gWDq6gNr';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+const sbClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 /* ---------- Estado de la aplicación ---------- */
 let db = {
@@ -28,13 +26,13 @@ async function init() {
 
   const tablas = ['categoria', 'producto', 'cliente', 'cliente_telefono', 'orden', 'orden_detalle'];
   for (const t of tablas) {
-    const { data } = await supabase.from(t).select('*');
+    const { data } = await sbClient.from(t).select('*');
     if (data) db[t] = data;
   }
-  
+
   // Asignar emojis
   db.producto.forEach(p => p._e = emojis[p.id_producto] || '📦');
-  
+
   render();
 }
 
@@ -120,23 +118,23 @@ async function checkout() {
 
     idc = nextId(db.cliente, 'id_cliente', 'C');
     const newCliente = { id_cliente: idc, nom1_cliente: n1, nom2_cliente: $('#n2').value.trim(), ape1_cliente: a1, ape2_cliente: $('#a2').value.trim() };
-    
-    await supabase.from('cliente').insert([newCliente]);
+
+    await sbClient.from('cliente').insert([newCliente]);
     db.cliente.push(newCliente);
 
     const newTel = { id_telefono: nextId(db.cliente_telefono, 'id_telefono', 'T'), id_cliente: idc, numero_telefono: tel };
-    await supabase.from('cliente_telefono').insert([newTel]);
+    await sbClient.from('cliente_telefono').insert([newTel]);
     db.cliente_telefono.push(newTel);
   }
 
   // Crea la orden y sus líneas de detalle en Supabase
   const ido = nextId(db.orden, 'id_orden', 'O');
   const newOrden = { id_orden: ido, id_cliente: idc };
-  await supabase.from('orden').insert([newOrden]);
+  await sbClient.from('orden').insert([newOrden]);
   db.orden.push(newOrden);
 
   const detalles = Object.entries(cart).map(([id, n]) => ({ id_orden: ido, id_producto: id, cantidad: n }));
-  await supabase.from('orden_detalle').insert(detalles);
+  await sbClient.from('orden_detalle').insert(detalles);
   detalles.forEach(d => db.orden_detalle.push(d));
 
   cart = {};
