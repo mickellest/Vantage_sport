@@ -4,7 +4,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Tienda Demo</title>
+  <title>Vantage Sport - Tienda & Gestión CRUD de Base de Datos</title>
+  <meta name="description" content="Plataforma de catálogo, compras y administración CRUD en tiempo real conectada a Supabase">
+
+  <!-- Google Fonts: Plus Jakarta Sans y JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -13,12 +19,28 @@
 <body>
   <header>
     <div class="bar">
-      <span class="logo">🛍️ Tienda Demo</span>
+      <div class="brand-group" onclick="go('tienda')" style="cursor: pointer;">
+        <span class="logo">⚡ Vantage Sport</span>
+        <span class="db-status-badge" id="db-indicator" title="Conexión en vivo con Supabase">
+          <span class="status-dot"></span>
+          <span>Supabase DB</span>
+        </span>
+      </div>
+
       <nav id="nav"></nav>
+
+      <div class="header-actions">
+        <button id="theme-btn" class="icon-btn" onclick="toggleTheme()" title="Cambiar modo claro / oscuro">🌙</button>
+      </div>
     </div>
   </header>
 
   <main id="app"></main>
+
+  <!-- Contenedor para Modales Dinámicos (Crear, Editar, Eliminar) -->
+  <div id="modal-root"></div>
+
+  <!-- Contenedor para Avisos Toast -->
   <div id="toast"></div>
 
   <script src="app.js"></script>
