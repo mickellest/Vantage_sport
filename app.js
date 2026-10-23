@@ -76,14 +76,19 @@ async function reloadDB(silent = false) {
 
   const tablas = ['categoria', 'producto', 'cliente', 'cliente_telefono', 'orden', 'orden_detalle'];
   try {
+    let errores = 0;
     for (const t of tablas) {
       const { data, error } = await sbClient.from(t).select('*');
       if (error) {
+        errores++;
         console.error(`Error cargando tabla ${t}:`, error);
       } else if (data) {
         db[t] = data;
       }
     }
+
+    // Ordenar órdenes de la más reciente a la más antigua
+    db.orden.sort((a, b) => String(b.fecha_orden || '').localeCompare(String(a.fecha_orden || '')));
 
     // Asignar emojis a productos
     db.producto.forEach(p => {
@@ -95,7 +100,16 @@ async function reloadDB(silent = false) {
       indicator.innerHTML = '<span class="status-dot"></span><span>Supabase DB</span>';
     }
 
-    if (!silent) toast('Base de datos sincronizada', 'info');
+    // Todas las tablas vacías y sin error = RLS activo sin políticas de lectura
+    const todoVacio = tablas.every(t => db[t].length === 0);
+    if (errores) {
+      toast(`No se pudieron cargar ${errores} tabla(s). Revisa la consola.`, 'error', 5000);
+    } else if (todoVacio) {
+      console.warn('Supabase devolvió 0 filas en todas las tablas. Si existen datos, faltan las políticas RLS (database/migrations/001_politicas_rls.sql).');
+      toast('La base respondió sin datos. Verifica las políticas RLS.', 'info', 5000);
+    } else if (!silent) {
+      toast('Base de datos sincronizada', 'info');
+    }
   } catch (err) {
     console.error('Error general de conexión:', err);
     toast('Error conectando con la base de datos', 'error');
@@ -112,6 +126,28 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
 }[c]));
 
 const prod = id => db.producto.find(p => p.id_producto === id) || { nombre_producto: 'Producto no disponible', precio_actual: 0, _e: '📦' };
+const fecha = f => f
+  ? new Date(f).toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' })
+  : '—';
+
+// Precio de una línea de orden: el congelado al comprar; si no existe, el actual del producto
+const precioLinea = d => Number(d.precio_unitario ?? prod(d.id_producto)?.precio_actual ?? 0);
+const totalOrden = idOrden => db.orden_detalle
+  .filter(d => d.id_orden === idOrden)
+  .reduce((acc, d) => acc + precioLinea(d) * (Number(d.cantidad) || 0), 0);
+
+// Traduce errores de Supabase/PostgreSQL a mensajes legibles
+function dbErrorMessage(err, fallback = 'Error en la base de datos') {
+  const map = {
+    '23505': 'Ya existe un registro con ese ID o clave única.',
+    '23503': 'Error de relación: el registro referenciado no existe o tiene datos vinculados.',
+    '23502': 'Falta un campo obligatorio.',
+    '23514': 'Un valor no cumple las reglas de la tabla (por ejemplo, precio o cantidad negativos).',
+    '42501': 'Permiso denegado por las políticas RLS de Supabase.',
+    'PGRST202': 'La función crear_orden no existe. Ejecuta database/migrations/002_ids_fecha_precio_checkout.sql.'
+  };
+  return map[err?.code] || err?.message || fallback;
+}
 const cli = id => db.cliente.find(c => c.id_cliente === id);
 const catObj = id => db.categoria.find(c => c.id_categoria === id);
 
@@ -123,20 +159,6 @@ const cartCount = () => Object.values(cart).reduce((a, b) => a + b, 0);
 const cartTotal = () => Object.entries(cart)
   .reduce((a, [id, n]) => a + (prod(id)?.precio_actual || 0) * n, 0);
 
-// Generador de ID correlativo
-function nextId(arr, key, prefix) {
-  const numbers = arr.map(item => {
-    const val = String(item[key] || '');
-    if (val.startsWith(prefix)) {
-      const num = parseInt(val.slice(prefix.length), 10);
-      return isNaN(num) ? 0 : num;
-    }
-    return 0;
-  });
-  const max = Math.max(0, ...numbers);
-  const padLength = prefix.length === 3 ? 2 : 3; // CAT01 vs P001/C001
-  return prefix + String(max + 1).padStart(padLength, '0');
-}
 
 /* Toast Notifications */
 function toast(msg, type = 'success', duration = 2400) {
@@ -304,11 +326,8 @@ const TABLE_CONFIG = {
         const count = items.reduce((acc, it) => acc + (Number(it.cantidad) || 0), 0);
         return `<span class="badge-tag cat">${count} unidades</span>`;
       }},
-      { key: '_total', label: 'Total Facturado', format: r => {
-        const items = db.orden_detalle.filter(d => d.id_orden === r.id_orden);
-        const total = items.reduce((acc, it) => acc + (prod(it.id_producto)?.precio_actual || 0) * (it.cantidad || 0), 0);
-        return `<b style="color:var(--ok)">${money(total)}</b>`;
-      }}
+      { key: 'fecha_orden', label: 'Fecha', format: r => `<span class="mu">${esc(fecha(r.fecha_orden))}</span>` },
+      { key: '_total', label: 'Total Facturado', format: r => `<b style="color:var(--ok)">${money(totalOrden(r.id_orden))}</b>` }
     ],
     fields: [
       { key: 'id_orden', label: 'ID de la Orden', type: 'text', required: true, autoId: true },
@@ -330,16 +349,14 @@ const TABLE_CONFIG = {
         return `<span class="badge-rel">${p._e || '📦'} ${esc(p.nombre_producto)}</span>`;
       }},
       { key: 'cantidad', label: 'Cantidad', format: r => `<b>${r.cantidad} u.</b>` },
-      { key: '_unitario', label: 'Precio Unitario', format: r => money(prod(r.id_producto)?.precio_actual) },
-      { key: '_subtotal', label: 'Subtotal', format: r => {
-        const sub = (prod(r.id_producto)?.precio_actual || 0) * (r.cantidad || 0);
-        return `<b style="color:var(--ok)">${money(sub)}</b>`;
-      }}
+      { key: 'precio_unitario', label: 'Precio Unitario', format: r => money(precioLinea(r)) },
+      { key: '_subtotal', label: 'Subtotal', format: r => `<b style="color:var(--ok)">${money(precioLinea(r) * (r.cantidad || 0))}</b>` }
     ],
     fields: [
       { key: 'id_orden', label: 'Orden', type: 'select', options: () => db.orden.map(o => ({ value: o.id_orden, label: `Orden ${o.id_orden} (${nom(cli(o.id_cliente))})` })), required: true },
       { key: 'id_producto', label: 'Producto', type: 'select', options: () => db.producto.map(p => ({ value: p.id_producto, label: `${p._e || '📦'} ${p.nombre_producto} - ${money(p.precio_actual)}` })), required: true },
-      { key: 'cantidad', label: 'Cantidad', type: 'number', min: '1', step: '1', default: '1', required: true }
+      { key: 'cantidad', label: 'Cantidad', type: 'number', min: '1', step: '1', default: '1', required: true },
+      { key: 'precio_unitario', label: 'Precio Unitario ($)', type: 'number', min: '0', step: '0.01', placeholder: 'Vacío = precio actual del producto' }
     ]
   }
 };
@@ -379,6 +396,9 @@ async function submitCrudForm(tableName, isEdit, originalId, originalComposite) 
         if (btn) { btn.disabled = false; btn.innerHTML = '💾 Guardar Registro'; }
         return;
       }
+
+      // Número opcional vacío: se omite para que la BD aplique su valor por defecto
+      if (f.type === 'number' && val === '') continue;
 
       if (f.type === 'number') {
         val = Number(val);
@@ -435,13 +455,7 @@ async function submitCrudForm(tableName, isEdit, originalId, originalComposite) 
     render();
   } catch (err) {
     console.error('Error guardando registro:', err);
-    let msg = err.message || 'Error al guardar en Supabase';
-    if (err.code === '23505') {
-      msg = 'Ya existe un registro con ese ID o clave única.';
-    } else if (err.code === '23503') {
-      msg = 'Error de relación: Verifique que las claves foráneas seleccionadas existan.';
-    }
-    toast(msg, 'error', 4000);
+    toast(dbErrorMessage(err, 'Error al guardar en Supabase'), 'error', 4000);
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -511,9 +525,18 @@ function openCreateModal(tableName) {
   const config = TABLE_CONFIG[tableName];
   if (!config) return;
 
-  const autoNextId = config.idPrefix ? nextId(db[tableName], config.idKey, config.idPrefix) : '';
-
   const formFieldsHtml = config.fields.map(f => {
+    // El ID lo genera la base de datos (secuencia + DEFAULT)
+    if (f.autoId) {
+      return `
+        <div>
+          <label>${esc(f.label)}</label>
+          <input value="Se asignará automáticamente (${esc(config.idPrefix)}…)" disabled style="opacity:0.7;">
+          <span class="form-help">Generado por la base de datos al guardar.</span>
+        </div>
+      `;
+    }
+
     if (f.type === 'select') {
       const opts = f.options().map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('');
       return `
@@ -541,7 +564,7 @@ function openCreateModal(tableName) {
       `;
     }
 
-    const val = f.autoId ? autoNextId : (f.default || '');
+    const val = f.default || '';
     return `
       <div>
         <label for="field-${f.key}">${esc(f.label)}</label>
@@ -552,7 +575,6 @@ function openCreateModal(tableName) {
                ${f.step ? `step="${f.step}"` : ''} 
                ${f.min !== undefined ? `min="${f.min}"` : ''} 
                ${f.required ? 'required' : ''}>
-        ${f.autoId ? '<span class="form-help">ID generado correlativamente (editable si lo deseas).</span>' : ''}
       </div>
     `;
   }).join('');
@@ -985,83 +1007,60 @@ function renderClientFields() {
 }
 
 async function checkout() {
-  let idc = $('#cs')?.value;
+  const idc = $('#cs')?.value;
   if (!idc) return;
 
   const btn = event?.target;
+  const resetBtn = () => {
+    if (btn) { btn.disabled = false; btn.textContent = '✔ Confirmar y Enviar Orden a Supabase'; }
+  };
+
+  // Parámetros de public.crear_orden(p_items, p_id_cliente, p_cliente)
+  const params = {
+    p_items: Object.entries(cart).map(([id_producto, cantidad]) => ({ id_producto, cantidad }))
+  };
+
+  if (idc === 'NEW') {
+    const cliente = {
+      nom1_cliente: $('#n1').value.trim(),
+      nom2_cliente: $('#n2').value.trim(),
+      ape1_cliente: $('#a1').value.trim(),
+      ape2_cliente: $('#a2').value.trim(),
+      numero_telefono: $('#tel').value.trim()
+    };
+    if (!cliente.nom1_cliente || !cliente.ape1_cliente || !cliente.numero_telefono) {
+      toast('Por favor completa nombre, apellido y teléfono', 'error');
+      return;
+    }
+    params.p_cliente = cliente;
+  } else {
+    params.p_id_cliente = idc;
+  }
+
   if (btn) {
     btn.disabled = true;
     btn.textContent = 'Procesando orden en Supabase...';
   }
 
   try {
-    if (idc === 'NEW') {
-      const n1 = $('#n1').value.trim();
-      const a1 = $('#a1').value.trim();
-      const tel = $('#tel').value.trim();
-
-      if (!n1 || !a1 || !tel) {
-        toast('Por favor completa nombre, apellido y teléfono', 'error');
-        if (btn) { btn.disabled = false; btn.textContent = '✔ Confirmar y Enviar Orden a Supabase'; }
-        return;
-      }
-
-      idc = nextId(db.cliente, 'id_cliente', 'C');
-      const newCliente = {
-        id_cliente: idc,
-        nom1_cliente: n1,
-        nom2_cliente: $('#n2').value.trim(),
-        ape1_cliente: a1,
-        ape2_cliente: $('#a2').value.trim()
-      };
-
-      const { error: cErr } = await sbClient.from('cliente').insert([newCliente]);
-      if (cErr) throw cErr;
-      db.cliente.push(newCliente);
-
-      const newTel = {
-        id_telefono: nextId(db.cliente_telefono, 'id_telefono', 'T'),
-        id_cliente: idc,
-        numero_telefono: tel
-      };
-      const { error: tErr } = await sbClient.from('cliente_telefono').insert([newTel]);
-      if (tErr) throw tErr;
-      db.cliente_telefono.push(newTel);
-    }
-
-    const ido = nextId(db.orden, 'id_orden', 'O');
-    const newOrden = { id_orden: ido, id_cliente: idc };
-    const { error: oErr } = await sbClient.from('orden').insert([newOrden]);
-    if (oErr) throw oErr;
-    db.orden.push(newOrden);
-
-    const detalles = Object.entries(cart).map(([id, n]) => ({
-      id_orden: ido,
-      id_producto: id,
-      cantidad: n
-    }));
-
-    const { error: dErr } = await sbClient.from('orden_detalle').insert(detalles);
-    if (dErr) throw dErr;
-    detalles.forEach(d => db.orden_detalle.push(d));
+    // Una sola transacción: cliente + teléfono + orden + detalle (todo o nada)
+    const { data: orden, error } = await sbClient.rpc('crear_orden', params);
+    if (error) throw error;
 
     cart = {};
-    last = ido;
+    last = orden.id_orden;
+    await reloadDB(true);
     render();
   } catch (err) {
     console.error('Error durante checkout:', err);
-    toast('Error procesando la compra: ' + (err.message || 'Error desconocido'), 'error');
-    if (btn) { btn.disabled = false; btn.textContent = '✔ Confirmar y Enviar Orden a Supabase'; }
+    toast('Error procesando la compra: ' + dbErrorMessage(err, 'Error desconocido'), 'error', 5000);
+    resetBtn();
   }
 }
 
 /* ---------- 3. Vista Órdenes ---------- */
 function vOrdenes() {
-  const total = idOrden => db.orden_detalle
-    .filter(d => d.id_orden === idOrden)
-    .reduce((a, d) => a + (prod(d.id_producto)?.precio_actual || 0) * d.cantidad, 0);
-
-  const orders = [...db.orden].reverse().map(o => {
+  const orders = db.orden.map(o => {
     const cliente = cli(o.id_cliente);
     const telefonos = db.cliente_telefono
       .filter(t => t.id_cliente === o.id_cliente)
@@ -1072,12 +1071,13 @@ function vOrdenes() {
       .filter(d => d.id_orden === o.id_orden)
       .map(d => {
         const p = prod(d.id_producto);
+        const precio = precioLinea(d);
         return `
           <div class="line">
             <span>${p._e || '📦'}</span>
             <span style="flex:1">${esc(p.nombre_producto)}</span>
-            <span class="mu">${d.cantidad} × ${money(p.precio_actual)}</span>
-            <b>${money(d.cantidad * p.precio_actual)}</b>
+            <span class="mu">${d.cantidad} × ${money(precio)}</span>
+            <b>${money(d.cantidad * precio)}</b>
           </div>
         `;
       }).join('');
@@ -1089,9 +1089,9 @@ function vOrdenes() {
             <span class="badge-id">${o.id_orden}</span>
             <span style="font-weight:700;">${esc(nom(cliente))}</span>
           </div>
-          <span class="price" style="color:var(--ok)">${money(total(o.id_orden))}</span>
+          <span class="price" style="color:var(--ok)">${money(totalOrden(o.id_orden))}</span>
         </div>
-        <div class="mu" style="margin-bottom:12px;">📞 ${esc(telefonos || 'Sin teléfono registrado')}</div>
+        <div class="mu" style="margin-bottom:12px;">🗓️ ${esc(fecha(o.fecha_orden))} · 📞 ${esc(telefonos || 'Sin teléfono registrado')}</div>
         ${detalle || '<p class="mu">Sin ítems registrados.</p>'}
       </div>
     `;
