@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101411">
+  <meta name="description" content="Vantage Sport — Marketplace de ropa deportiva, equipamiento y drops de alta gama. Descubre el catálogo abierto con precios, comparativas y preguntas al vendedor.">
+  <title>Vantage Sport — Tienda Oficial | Ropa Deportiva & Calzado</title>
+
+  <!-- Google Fonts: Barlow Condensed & DM Sans (Misma tipografía del Studio Admin) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="tienda.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="tienda.js" defer></script>
+</head>
+<body>
+
+  <!-- =====================================================================
+       HEADER PRINCIPAL (ESTILO MERCADO LIBRE + IDENTIDAD VANTAGE)
+       ===================================================================== -->
+  <header class="store-header">
+    <div class="header-top">
+      <!-- Logo Vantage Sport -->
+      <a href="tienda.html" class="brand-link" aria-label="Vantage Sport Inicio">
+        <div class="brand-badge">
+          <span>V</span>
+        </div>
+        <div class="brand-info">
+          <span class="brand-title">VANTAGE<span class="brand-dot">.</span></span>
+          <span class="brand-tag">ATHLETIC MARKETPLACE</span>
+        </div>
+      </a>
+
+      <!-- Barra de Búsqueda Prominente (Mercado Libre Style) -->
+      <div class="header-search-wrap">
+        <div class="header-search-bar">
+          <input type="text" 
+                 id="searchInput" 
+                 class="search-input" 
+                 placeholder="Buscar camisetas, zapatillas, shorts, balones, hoodies..." 
+                 autocomplete="off" 
+                 aria-label="Buscar productos">
+          <button type="button" id="searchClearBtn" class="search-clear-btn" aria-label="Borrar búsqueda">✕</button>
+          <button type="button" class="search-btn" onclick="window.applyPriceFilter()" aria-label="Buscar">
+            <span>⌕</span>
+          </button>
+        </div>
+
+        <!-- Sugerencias Rápidas al enfocar la barra -->
+        <div class="search-suggestions" id="searchSuggestions">
+          <div class="suggestion-header">Búsquedas Populares en Deportes</div>
+          <div class="suggestion-item" data-query="Camiseta Matchday">
+            <span class="suggestion-icon">↗</span> <span>Camisetas de Fútbol Matchday Pro</span>
+          </div>
+          <div class="suggestion-item" data-query="Zapatillas Running">
+            <span class="suggestion-icon">↗</span> <span>Zapatillas Nitro Speed con placa de carbono</span>
+          </div>
+          <div class="suggestion-item" data-query="Hoodie Térmico">
+            <span class="suggestion-icon">↗</span> <span>Hoodie Térmico Performance Fleece</span>
+          </div>
+          <div class="suggestion-item" data-query="Shorts Compresión">
+            <span class="suggestion-icon">↗</span> <span>Shorts Pro Combat con bolsillo celular</span>
+          </div>
+          <div class="suggestion-item" data-query="Balón Oficial">
+            <span class="suggestion-icon">↗</span> <span>Balón Match Ball FIFA Quality Pro</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones de Usuario Superior -->
+      <div class="header-actions">
+        <!-- Switcher a Modo Admin Studio -->
+        <a href="index.html" class="admin-switch-btn" title="Ir al Panel de Marketing y Gestión de Base de Datos">
+          <span>⚡</span>
+          <span>Panel Admin</span>
+        </a>
+
+        <!-- Comparador Contador -->
+        <button class="header-action-btn" onclick="window.openCompareModal()" title="Ver productos en comparación">
+          <span>⚖️</span>
+          <span>Comparar</span>
+          <span class="action-badge" id="topCompareCount">0</span>
+        </button>
+
+        <!-- Carrito -->
+        <button class="header-action-btn" onclick="window.openCartDrawer()" title="Abrir carrito de compras">
+          <span>🛒</span>
+          <span>Carrito</span>
+          <span class="action-badge" id="cartHeaderCount">0</span>
+        </button>
+
+        <!-- Estado de Usuario / Auth (Visitante vs Logueado) -->
+        <div id="headerUserAuthWrap">
+          <div class="user-auth-pill" onclick="window.openAuthModal('Ingresar')">
+            <span>👤 Iniciar sesión / Registro</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra Secundaria (Ubicación, Categorías y Drops) -->
+    <div class="header-bottom">
+      <div class="delivery-location" onclick="alert('Envíos disponibles para todo el país a través de red Vantage Full y Starken.')" title="Configurar destino de envío">
+        <span class="location-icon">📍</span>
+        <div class="location-text">
+          <span>Enviar a </span><strong>Todo el país (Envío Gratis)</strong>
+        </div>
+      </div>
+
+      <nav class="header-nav-categories" aria-label="Categorías principales">
+        <a href="#catalogo" class="cat-nav-link active" data-category="Todas" onclick="window.filterByCategory('Todas')">Todas</a>
+        <a href="#catalogo" class="cat-nav-link" data-category="Fútbol" onclick="window.filterByCategory('Fútbol')">Fútbol</a>
+        <a href="#catalogo" class="cat-nav-link" data-category="Running" onclick="window.filterByCategory('Running')">Running</a>
+        <a href="#catalogo" class="cat-nav-link" data-category="Training" onclick="window.filterByCategory('Training')">Training & Gym</a>
+        <a href="#catalogo" class="cat-nav-link" data-category="Abrigo" onclick="window.filterByCategory('Abrigo')">Hoodies & Chaquetas</a>
+        <a href="#catalogo" class="cat-nav-link" data-category="Calzado" onclick="window.filterByCategory('Calzado')">Calzado Nitro</a>
+        <a href="#catalogo" class="cat-nav-link" data-category="Accesorios" onclick="window.filterByCategory('Accesorios')">Accesorios & Balones</a>
+        <span class="tag-full-pill">⚡ ENVÍO FULL 24H</span>
+      </nav>
+    </div>
+  </header>
+
+  <!-- =====================================================================
+       BANNER HERO & BENEFICIOS (ESTILO MERCADO LIBRE + LOOK DEPORTIVO)
+       ===================================================================== -->
+  <section class="store-hero-banner" aria-label="Promoción principal">
+    <div class="hero-banner-inner">
+      <div class="hero-banner-text">
+        <div class="hero-kicker">
+          <span>✳</span> DROP TEMPORADA 2026 / SPORT IS A STATE OF MIND
+        </div>
+        <h1>EQUÍPATE CON EL <span>ALTO RENDIMIENTO.</span></h1>
+        <p>
+          Explora todo nuestro catálogo abierto sin restricciones. Compara especificaciones técnicas de telas, revisa precios en cuotas sin interés y consulta cualquier duda directamente al equipo oficial.
+        </p>
+
+        <div class="hero-benefits-row">
+          <div class="benefit-item">
+            <span class="benefit-icon">⚡</span>
+            <span>Envíos FULL gratis en miles de prendas</span>
+          </div>
+          <div class="benefit-item">
+            <span class="benefit-icon">💳</span>
+            <span>Hasta 6 cuotas sin interés</span>
+          </div>
+          <div class="benefit-item">
+            <span class="benefit-icon">🛡️</span>
+            <span>30 días de garantía y devolución gratis</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-banner-art">
+        <div class="hero-promo-card">
+          <span class="promo-badge-top">OFERTA DE LA SEMANA</span>
+          <h3>LÍNEA MATCHDAY PRO</h3>
+          <p>Hasta un <strong>40% OFF</strong> en equipaciones técnicas de fútbol y running con tecnología Dry-Ventilated.</p>
+          <button class="hero-promo-cta" onclick="window.filterByCategory('Fútbol')">
+            <span>Ver colección en oferta</span>
+            <span>↗</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =====================================================================
+       LAYOUT PRINCIPAL: FILTROS FACETADOS + GRILLA DE PRODUCTOS
+       ===================================================================== -->
+  <main class="store-layout" id="catalogo">
+    
+    <!-- Sidebar de Filtros (Estilo Mercado Libre) -->
+    <aside class="filters-sidebar" aria-label="Filtros del catálogo">
+      <div class="filters-header">
+        <span class="filters-title"><span>⚙</span> Filtros</span>
+        <button class="clear-filters-btn" onclick="window.clearAllFilters()">Limpiar todo</button>
+      </div>
+
+      <!-- Filtro por Categorías -->
+      <div class="filter-group">
+        <div class="filter-label">Categoría Deportiva</div>
+        <div class="category-filter-list">
+          <div class="cat-filter-item active" data-category="Todas" onclick="window.filterByCategory('Todas')">
+            <span>Todas las prendas</span>
+            <span class="cat-filter-count">12</span>
+          </div>
+          <div class="cat-filter-item" data-category="Fútbol" onclick="window.filterByCategory('Fútbol')">
+            <span>Fútbol</span>
+            <span class="cat-filter-count">3</span>
+          </div>
+          <div class="cat-filter-item" data-category="Running" onclick="window.filterByCategory('Running')">
+            <span>Running</span>
+            <span class="cat-filter-count">3</span>
+          </div>
+          <div class="cat-filter-item" data-category="Training" onclick="window.filterByCategory('Training')">
+            <span>Training & Crossfit</span>
+            <span class="cat-filter-count">2</span>
+          </div>
+          <div class="cat-filter-item" data-category="Abrigo" onclick="window.filterByCategory('Abrigo')">
+            <span>Hoodies & Abrigo</span>
+            <span class="cat-filter-count">2</span>
+          </div>
+          <div class="cat-filter-item" data-category="Pantalones" onclick="window.filterByCategory('Pantalones')">
+            <span>Leggings & Joggers</span>
+            <span class="cat-filter-count">2</span>
+          </div>
+          <div class="cat-filter-item" data-category="Accesorios" onclick="window.filterByCategory('Accesorios')">
+            <span>Accesorios & Balones</span>
+            <span class="cat-filter-count">3</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtro por Rango de Precios -->
+      <div class="filter-group">
+        <div class="filter-label">Precio ($ USD)</div>
+        <div class="price-inputs-row">
+          <div class="price-input-box">
+            <span>$</span>
+            <input type="number" id="priceMinInput" placeholder="Mínimo" min="0">
+          </div>
+          <span style="color: #8c9388;">-</span>
+          <div class="price-input-box">
+            <span>$</span>
+            <input type="number" id="priceMaxInput" placeholder="Máximo" min="0">
+          </div>
+          <button class="btn-price-apply" onclick="window.applyPriceFilter()">›</button>
+        </div>
+        <div class="price-presets">
+          <button class="price-preset-btn" onclick="window.setPricePreset(0, 35)">Hasta $35</button>
+          <button class="price-preset-btn" onclick="window.setPricePreset(35, 70)">$35 a $70</button>
+          <button class="price-preset-btn" onclick="window.setPricePreset(70, null)">Más de $70</button>
+        </div>
+      </div>
+
+      <!-- Filtro por Beneficios de Envío y Descuentos -->
+      <div class="filter-group">
+        <div class="filter-label">Beneficios</div>
+        <label class="filter-checkbox-item">
+          <input type="checkbox" id="freeShippingCheckbox" onchange="window.toggleFreeShipping(this.checked)">
+          <span>⚡ Envío Gratis</span>
+        </label>
+        <label class="filter-checkbox-item">
+          <input type="checkbox" id="dealsCheckbox" onchange="window.toggleDealsOnly(this.checked)">
+          <span>🔥 Ofertas relámpago (> 20% OFF)</span>
+        </label>
+      </div>
+
+      <!-- Filtro por Tallas -->
+      <div class="filter-group">
+        <div class="filter-label">Tallas Disponibles</div>
+        <div class="size-chips-grid">
+          <button class="size-chip" data-size="XS" onclick="window.filterBySize('XS')">XS</button>
+          <button class="size-chip" data-size="S" onclick="window.filterBySize('S')">S</button>
+          <button class="size-chip" data-size="M" onclick="window.filterBySize('M')">M</button>
+          <button class="size-chip" data-size="L" onclick="window.filterBySize('L')">L</button>
+          <button class="size-chip" data-size="XL" onclick="window.filterBySize('XL')">XL</button>
+          <button class="size-chip" data-size="XXL" onclick="window.filterBySize('XXL')">XXL</button>
+        </div>
+      </div>
+
+      <!-- Garantía de Compra -->
+      <div style="background: #f7f8f3; padding: 12px; border-radius: var(--radius-sm); font-size: 11px; color: #555e54; margin-top: 10px;">
+        <strong>🛡️ Compra 100% Protegida:</strong> Si el producto no es lo que esperabas o no te queda la talla, lo devuelves gratis y te reembolsamos tu dinero.
+      </div>
+    </aside>
+
+    <!-- Área de Catálogo (Resultados y Grilla) -->
+    <section class="catalog-area" aria-label="Catálogo de productos">
+      
+      <!-- Toolbar de Resultados y Ordenamiento -->
+      <div class="catalog-toolbar">
+        <div class="toolbar-info">
+          <span class="results-count" id="resultsCount">12 productos</span>
+          <div class="active-filters-chips" id="activeFilterChips"></div>
+        </div>
+
+        <div class="toolbar-controls">
+          <div class="sort-wrapper">
+            <label for="sortSelect">Ordenar por:</label>
+            <select id="sortSelect" class="sort-select" onchange="window.setSortBy(this.value)">
+              <option value="relevance">Más relevantes (Destacados)</option>
+              <option value="price-asc">Menor precio</option>
+              <option value="price-desc">Mayor precio</option>
+              <option value="rating">Mejor calificados</option>
+              <option value="discount">Mayor descuento</option>
+            </select>
+          </div>
+
+          <div class="view-mode-toggle">
+            <button class="view-btn active" data-mode="grid" onclick="window.setViewMode('grid')" title="Vista en cuadrícula">⊞</button>
+            <button class="view-btn" data-mode="list" onclick="window.setViewMode('list')" title="Vista en lista">☰</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grilla Dinámica de Productos -->
+      <div class="products-grid" id="productsGrid">
+        <!-- Renderizado dinámico vía tienda.js -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =====================================================================
+       BARRA FLOTANTE DE COMPARACIÓN (BOTTOM DOCK)
+       ===================================================================== -->
+  <aside class="compare-dock" id="compareDock" aria-label="Comparador de productos">
+    <div class="compare-dock-label">
+      ⚖️ Comparando (<span id="compareDockCount">0</span>/3)
+    </div>
+    <div class="compare-dock-items" id="compareDockItems"></div>
+    <button class="btn-open-compare" onclick="window.openCompareModal()">
+      Ver Comparativa Técnica
+    </button>
+    <button class="btn-clear-compare" onclick="window.clearCompare()">
+      Limpiar
+    </button>
+  </aside>
+
+  <!-- =====================================================================
+       CONTENEDORES PARA MODALES Y DRAWERS
+       ===================================================================== -->
+  <!-- Modal de Detalle de Producto -->
+  <div id="productDetailModalRoot"></div>
+
+  <!-- Modal de Comparación Cara a Cara -->
+  <div id="compareModalRoot"></div>
+
+  <!-- Modal de Inicio de Sesión / Auth ("Inicia sesión para preguntar") -->
+  <div id="authModalRoot"></div>
+
+  <!-- Drawer Lateral del Carrito de Compras -->
+  <div class="cart-drawer-overlay" id="cartDrawerOverlay" onclick="window.closeCartDrawer(event)">
+    <div class="cart-drawer" onclick="event.stopPropagation()">
+      <div class="cart-drawer-header">
+        <h3>Tu Carrito Vantage</h3>
+        <button class="modal-close-btn" onclick="window.closeCartDrawer()">✕</button>
+      </div>
+
+      <div class="cart-items-list" id="cartDrawerItems">
+        <!-- Items renderizados dinámicamente -->
+      </div>
+
+      <div class="cart-drawer-footer">
+        <div class="cart-summary-line">
+          <span>Subtotal</span>
+          <span id="cartDrawerSubtotal">$0.00</span>
+        </div>
+        <div class="cart-summary-line" style="color: var(--green-ship);">
+          <span>Envío</span>
+          <span>Gratis</span>
+        </div>
+        <div class="cart-total-line">
+          <span>Total Estimado</span>
+          <span id="cartDrawerTotal">$0.00</span>
+        </div>
+        <button class="btn-cart-checkout" onclick="window.checkoutCart()">
+          Continuar Compra ↗
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Región para Notificaciones Toast -->
+  <div class="toast-container" id="toastRegion" aria-live="polite"></div>
+
+  <!-- =====================================================================
+       FOOTER (ESTILO MERCADO LIBRE + BRANDING VANTAGE SPORT)
+       ===================================================================== -->
+  <footer class="store-footer">
+    <div class="footer-inner">
+      <div class="footer-col">
+        <h4>Vantage Sport®</h4>
+        <p style="margin-bottom: 12px; line-height: 1.6;">
+          Diseñado para los que no se rinden. Ropa deportiva de alto impacto con tecnología textil de vanguardia.
+        </p>
+        <p><strong>HQ Santiago / Valparaíso</strong></p>
+      </div>
+      <div class="footer-col">
+        <h4>Ayuda y Envíos</h4>
+        <ul>
+          <li><a href="#catalogo">Envíos Full en 24 Horas</a></li>
+          <li><a href="#catalogo">Garantía de Devolución 30 Días</a></li>
+          <li><a href="#catalogo" onclick="window.openSizeGuide()">Guía Oficial de Tallas</a></li>
+          <li><a href="#catalogo">Preguntas Frecuentes al Vendedor</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Comunidad y Redes</h4>
+        <ul>
+          <li><a href="#">Instagram @VantageSport</a></li>
+          <li><a href="#">TikTok Athletic Moments</a></li>
+          <li><a href="#">Comunidad LGBT+ Deportistas</a></li>
+          <li><a href="#">Embajadores Oficiales 2026</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Administración</h4>
+        <ul>
+          <li><a href="index.html" style="color: var(--lime); font-weight: 700;">⚡ Panel de Marketing Studio</a></li>
+          <li><a href="index.html">Gestión de Campañas y Clientes</a></li>
+          <li><a href="index.html">Control de Catálogo y Base de Datos</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2026 VANTAGE ATHLETIC DEPT. TODOS LOS DERECHOS RESERVADOS.</span>
+      <span>SPORT IS A STATE OF MIND — POWERED BY SUPABASE</span>
+    </div>
+  </footer>
+
+</body>
+</html>

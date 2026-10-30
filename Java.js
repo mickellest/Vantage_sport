@@ -27,7 +27,7 @@
       description: 'Consulta los registros de envío y su información operativa desde el panel de marketing.'
     },
     pedidos: {
-      candidates: ['pedidos', 'Pedidos', 'Pedido', 'pedido'],
+      candidates: ['pedidos', 'Pedidos', 'Pedido', 'pedido', 'orden', 'Orden', 'ordenes', 'ordenes_venta'],
       title: 'Gestión de Pedidos',
       accent: 'orders.',
       breadcrumb: 'COMMERCE TOOLS',
@@ -392,11 +392,19 @@
     if (labelNode) labelNode.textContent = count === 1 ? 'REGISTRO' : 'REGISTROS';
   }
 
+  function removeDiacritics(str) {
+    return String(str || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  }
+
   window.filterTable = function filterTable() {
     const search = $('#searchInput');
     const body = $('#tableBody');
     if (!search || !body) return;
-    const term = search.value.trim().toLocaleLowerCase('es');
+    const cleanTerm = removeDiacritics(search.value).trim();
+    const words = cleanTerm.split(/\s+/).filter(Boolean);
     let visible = 0;
     const rows = $$('tr', body);
     rows.forEach(row => {
@@ -405,11 +413,13 @@
         row.hidden = false;
         return;
       }
-      const match = row.textContent.toLocaleLowerCase('es').includes(term);
+      const content = removeDiacritics(row.textContent);
+      const match = !cleanTerm || content.includes(cleanTerm) ||
+                    (words.length > 1 && words.every(w => content.includes(w)));
       row.hidden = !match;
       if (match) visible++;
     });
-    if (term && rows.some(row => !row.querySelector('.table-placeholder')) && visible === 0) {
+    if (cleanTerm && rows.some(row => !row.querySelector('.table-placeholder')) && visible === 0) {
       let none = $('#noSearchResults', body);
       if (!none) {
         const row = document.createElement('tr');
