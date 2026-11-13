@@ -7,8 +7,8 @@
 | **Proyecto Supabase** | `kwyycebjmdgxihbtjwqy` |
 | **Esquema** | `public` (19 tablas + 7 tipos ENUM + 2 funciones RPC/Trigger) |
 | **Cliente de acceso** | `@supabase/supabase-js` v2 (CDN) |
-| **Versión del documento** | 2.0 (Esquema Unificado) |
-| **Fecha** | 05/11/2026 |
+| **Versión del documento** | 2.1 (Esquema Unificado + Login Admin + Proceso BPMN) |
+| **Fecha** | 13/11/2026 |
 
 ---
 
@@ -31,6 +31,8 @@
 15. [Consultas SQL útiles (Reportes y Analítica)](#15-consultas-sql-útiles-reportes-y-analítica)
 16. [Datos de ejemplo (Seed Unificado)](#16-datos-de-ejemplo-seed-unificado)
 17. [Respaldo y mantenimiento](#17-respaldo-y-mantenimiento)
+18. [Autenticación y Control de Roles (Administrador vs Cliente)](#18-autenticación-y-control-de-roles-administrador-vs-cliente)
+19. [Verificación y Cumplimiento del Proceso de Negocio (BPMN)](#19-verificación-y-cumplimiento-del-proceso-de-negocio-bpmn)
 
 ---
 
@@ -1027,3 +1029,64 @@ Resumen de los datos cargados por el Seed Unificado:
 | **Restauración de emergencia** | Ejecutar en orden: 1) `database/esquema_unificado.sql`, 2) `database/get_crud_metadata.sql`, 3) `database/seed_unificado.sql` (o el archivo `backup_vantage_unificado.sql`). |
 | **Exportar versión imprimible (HTML / PDF)** | Ejecutar `node docs/build_pdf_html.js` desde la raíz del proyecto para regenerar [`docs/DOCUMENTACION_BASE_DATOS_EXPORT.html`](DOCUMENTACION_BASE_DATOS_EXPORT.html) con todos los diagramas Mermaid listos para imprimir a PDF. |
 | **Reactivación en plan gratuito** | Si el proyecto de Supabase entra en pausa por inactividad tras 7 días sin consultas, ingresar a `https://supabase.com/dashboard` y presionar **Restore project**. |
+
+---
+
+## 18. Autenticación y Control de Roles (Administrador vs Cliente)
+
+Implementado en [`database/migrations/crear_usuario_admin.sql`](../database/migrations/crear_usuario_admin.sql) y conectado en [`tienda.js`](../tienda.js) y [`Java.js`](../Java.js):
+
+1. **Credenciales Oficiales de Administrador**:
+   - **Usuario / Email**: `admin` (o `admin@vantage.com`)
+   - **Contraseña**: `admin`
+   - **Rol asignado en `public.roles`**: `administrador`
+
+2. **Funciones RPC de Autenticación y Checkout (`SECURITY DEFINER`)**:
+   - `public.autenticar_usuario(p_identificador, p_password)`: Verifica las credenciales en `public.usuarios` y `public.roles` mediante `pgcrypto` (`crypt()`) sin exponer `password_hash` al rol `anon`, o autentica clientes registrados en `public.cliente`.
+   - `public.registrar_cliente_tienda(p_nombre, p_apellido, p_email, p_telefono)`: Registra nuevos clientes desde la tienda en `public.cliente` y `public.cliente_telefono`.
+   - `public.procesar_checkout_completo(...)`: Ejecuta en una transacción el flujo completo de checkout (cliente, teléfono, dirección, cupón de promoción, cabecera de orden, líneas de detalle, descuento de stock en variantes, registro de pago y guía de envío).
+
+---
+
+## 19. Verificación y Cumplimiento del Proceso de Negocio (BPMN)
+
+El desarrollo de la aplicación cumple íntegramente el **Modelo y Notación de Procesos de Negocio (BPMN)** conectando los 3 carriles operativos con la base de datos:
+
+```mermaid
+flowchart TD
+    subgraph Cliente ["Carril 1: Cliente (tienda.html / tienda.js)"]
+        A([Inicio]) --> B[Explorar Catálogo, Categorías y Stock real de Variantes]
+        B --> C{¿Desea consultar al vendedor?}
+        C -- Sí --> D[Validar sesión y publicar pregunta en el producto]
+        C -- No --> E[Seleccionar Talla/Color y Agregar al Carrito]
+        D --> E
+        E --> F[Iniciar Checkout Oficial]
+        F --> G[Completar Dirección, Cupón, Método de Pago y Transportista]
+    end
+
+    subgraph Sistema ["Carril 2: Sistema Transaccional (Supabase PostgreSQL)"]
+        G --> H[Registrar/Actualizar cliente, cliente_telefono y direcciones_cliente]
+        H --> I[Validar descuento activo en tabla promociones]
+        I --> J[Insertar cabecera en orden y líneas en orden_detalle]
+        J --> K[Descontar stock_actual en variantes_producto]
+        K --> L[Registrar cobro en tabla pagos y generar guía en tabla envios]
+    end
+
+    subgraph Admin ["Carril 3: Administrador / Marketing (index.html / Java.js)"]
+        L --> M[Consultar y gestionar Pedidos, Detalle de Pedidos y Pagos]
+        M --> N[Actualizar estado de despacho en tabla envios]
+        N --> O{¿Requiere reposición de stock?}
+        O -- Sí --> P[Gestionar Proveedores y Órdenes de Suministro]
+        O -- No --> Q([Fin del Proceso])
+        P --> Q
+    end
+```
+
+| Etapa del Proceso BPMN | Implementación en la Aplicación | Tablas Sincronizadas |
+|---|---|---|
+| **1. Catálogo y Variantes** | `initProducts()` en [`tienda.js`](../tienda.js) | `producto`, `categoria`, `variantes_producto`, `promociones` |
+| **2. Login y Control de Acceso** | `handleAuthSubmit()`, `handleRegisterSubmit()` y `handleAdminPanelAccess()` en [`tienda.js`](../tienda.js) | `usuarios`, `roles`, `cliente`, `cliente_telefono` |
+| **3. Checkout Transaccional** | `openCheckoutModal()` y `submitCheckoutOrder()` en [`tienda.js`](../tienda.js) | `cliente`, `direcciones_cliente`, `promociones`, `orden`, `orden_detalle`, `variantes_producto`, `pagos`, `envios` |
+| **4. Trazabilidad de Pedidos del Cliente** | Modal **"📦 Mis Pedidos"** (`openCustomerOrdersModal()`) en [`tienda.js`](../tienda.js) | `orden`, `pagos`, `envios`, `cliente` |
+| **5. Gestión Administrativa y Suministros** | Menú lateral de 12 módulos en [`index.html`](../index.html) y [`Java.js`](../Java.js) | `campana`, `cliente`, `promociones`, `categoria`, `producto`, `variantes_producto`, `orden`, `orden_detalle`, `pagos`, `envios`, `proveedores`, `ordenes_suministro` |
+

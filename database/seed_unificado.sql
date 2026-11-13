@@ -13,17 +13,25 @@ BEGIN;
 -- ---------------------------------------------------------------------
 -- 1. ROLES Y USUARIOS (ADMINISTRADORES Y ASESORES)
 -- ---------------------------------------------------------------------
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 INSERT INTO public.roles (nombre, descripcion) VALUES
+  ('administrador', 'Administrador general con acceso total al panel y base de datos'),
   ('admin', 'Administrador total de la plataforma y tienda'),
   ('asesor', 'Asesor comercial de marketing y ventas'),
-  ('marketing', 'Especialista en campañas, drops y promociones')
+  ('marketing', 'Especialista en campañas, drops y promociones'),
+  ('cliente', 'Cliente registrado de la tienda online Vantage Sport')
 ON CONFLICT (nombre) DO NOTHING;
 
 INSERT INTO public.usuarios (rol_id, nombre, email, password_hash, activo) VALUES
-  ((SELECT rol_id FROM public.roles WHERE nombre = 'admin' LIMIT 1), 'Vantage Marketing HQ', 'marketing@vantage.com', '$2a$12$e8y..mockAdminHashForSecurity', true),
-  ((SELECT rol_id FROM public.roles WHERE nombre = 'asesor' LIMIT 1), 'Carlos Mendoza (Asesor Senior)', 'carlos.mendoza@vantage.com', '$2a$12$e8y..mockAdvisorHash1', true),
-  ((SELECT rol_id FROM public.roles WHERE nombre = 'asesor' LIMIT 1), 'Sofía Valenzuela (Asesora Ventas)', 'sofia.valenzuela@vantage.com', '$2a$12$e8y..mockAdvisorHash2', true)
-ON CONFLICT (email) DO NOTHING;
+  ((SELECT rol_id FROM public.roles WHERE nombre = 'administrador' LIMIT 1), 'Admin Vantage', 'admin@vantage.com', crypt('admin123', gen_salt('bf')), true),
+  ((SELECT rol_id FROM public.roles WHERE nombre = 'administrador' LIMIT 1), 'Vantage Marketing HQ', 'marketing@vantage.com', crypt('admin123', gen_salt('bf')), true),
+  ((SELECT rol_id FROM public.roles WHERE nombre = 'asesor' LIMIT 1), 'Carlos Mendoza (Asesor Senior)', 'carlos.mendoza@vantage.com', crypt('admin123', gen_salt('bf')), true),
+  ((SELECT rol_id FROM public.roles WHERE nombre = 'asesor' LIMIT 1), 'Sofía Valenzuela (Asesora Ventas)', 'sofia.valenzuela@vantage.com', crypt('admin123', gen_salt('bf')), true)
+ON CONFLICT (email) DO UPDATE
+SET rol_id = EXCLUDED.rol_id,
+    password_hash = EXCLUDED.password_hash,
+    activo = true;
 
 -- ---------------------------------------------------------------------
 -- 2. CATEGORÍAS DEPORTIVAS

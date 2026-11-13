@@ -42,15 +42,37 @@
           <span class="nav-icon" aria-hidden="true">％</span><span>Promociones</span><span class="nav-tag">OFFERS</span>
         </button>
 
-        <div class="nav-label nav-label-spaced">HERRAMIENTAS</div>
+        <div class="nav-label nav-label-spaced">CATÁLOGO E INVENTARIO</div>
+        <button class="nav-item" data-tab="categorias" onclick="switchTab(event, 'categorias')" type="button">
+          <span class="nav-icon" aria-hidden="true">⊞</span><span>Categorías</span>
+        </button>
         <button class="nav-item" data-tab="productos" onclick="switchTab(event, 'productos')" type="button">
           <span class="nav-icon" aria-hidden="true">◇</span><span>Productos</span>
         </button>
+        <button class="nav-item" data-tab="variantes" onclick="switchTab(event, 'variantes')" type="button">
+          <span class="nav-icon" aria-hidden="true">◈</span><span>Variantes y Stock</span>
+        </button>
+
+        <div class="nav-label nav-label-spaced">VENTAS Y LOGÍSTICA (BPMN)</div>
         <button class="nav-item" data-tab="pedidos" onclick="switchTab(event, 'pedidos')" type="button">
-          <span class="nav-icon" aria-hidden="true">▤</span><span>Pedidos</span>
+          <span class="nav-icon" aria-hidden="true">▤</span><span>Pedidos (Órdenes)</span>
+        </button>
+        <button class="nav-item" data-tab="orden_detalle" onclick="switchTab(event, 'orden_detalle')" type="button">
+          <span class="nav-icon" aria-hidden="true">≡</span><span>Detalle de Pedidos</span>
+        </button>
+        <button class="nav-item" data-tab="pagos" onclick="switchTab(event, 'pagos')" type="button">
+          <span class="nav-icon" aria-hidden="true">$</span><span>Pagos</span>
         </button>
         <button class="nav-item" data-tab="envios" onclick="switchTab(event, 'envios')" type="button">
           <span class="nav-icon" aria-hidden="true">⇢</span><span>Envíos</span>
+        </button>
+
+        <div class="nav-label nav-label-spaced">SUMINISTROS</div>
+        <button class="nav-item" data-tab="proveedores" onclick="switchTab(event, 'proveedores')" type="button">
+          <span class="nav-icon" aria-hidden="true">🏭</span><span>Proveedores</span>
+        </button>
+        <button class="nav-item" data-tab="suministros" onclick="switchTab(event, 'suministros')" type="button">
+          <span class="nav-icon" aria-hidden="true">📦</span><span>Órdenes Suministro</span>
         </button>
 
         <div class="nav-label nav-label-spaced">TIENDA ONLINE</div>
@@ -65,10 +87,13 @@
           <p>EL FUTBOL<br><b>MUEVE A LAS PERSONAS.</b></p>
           <div class="field-notes-lines" aria-hidden="true"></div>
         </div>
-        <div class="sidebar-user">
-          <div class="user-avatar">VM</div>
-          <div class="user-meta"><strong>Vantage Marketing</strong><span>esto deberia ser un usuario pero no se configuró bien tehee</span></div>
-          <span class="user-status" title="Workspace"></span>
+        <div class="sidebar-user" id="sidebarUserCard">
+          <div class="user-avatar" id="sidebarUserAvatar">AD</div>
+          <div class="user-meta">
+            <strong id="sidebarUserName">Admin Vantage</strong>
+            <span id="sidebarUserRole">Rol: Administrador • Conectado</span>
+          </div>
+          <span class="user-status" title="Sesión Administrador Activa"></span>
         </div>
       </div>
     </aside>
@@ -87,7 +112,7 @@
           <div class="live-status"><span class="live-dot"></span><span>WORKSPACE LIVE</span></div>
           <div class="topbar-divider"></div>
           <div class="topbar-date" id="currentDate">MARKETING / HQ</div>
-          <div class="topbar-avatar" aria-label="Vantage Marketing">VM</div>
+          <div class="topbar-avatar" id="topbarUserAvatar" title="Admin Vantage (Rol: Administrador)" aria-label="Admin Vantage">AD</div>
         </div>
       </header>
 
@@ -186,3 +211,4 @@
   <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
 </body>
 </html>
+

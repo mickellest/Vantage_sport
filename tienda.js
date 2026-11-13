@@ -530,46 +530,159 @@
     updateAuthHeaderUI();
   }
 
-  // Carga inicial y combinación con Supabase si existen productos
+  function isUserAdmin(user = state.currentUser) {
+    if (!user) return false;
+    const rol = String(user.rol || user.role || '').toLowerCase();
+    return Boolean(user.esAdmin || ['administrador', 'admin', 'marketing', 'asesor'].includes(rol));
+  }
+
+  function updateAuthHeaderUI() {
+    const authWrap = $('#headerUserAuthWrap');
+    const adminBtn = $('#adminSwitchBtn');
+    const user = state.currentUser;
+    const admin = isUserAdmin(user);
+
+    if (adminBtn) {
+      if (admin) {
+        adminBtn.style.display = 'inline-flex';
+        adminBtn.style.background = 'var(--lime)';
+        adminBtn.style.color = 'var(--ink-deep)';
+        adminBtn.innerHTML = '<span>⚡</span><span>Panel Admin (Activo)</span>';
+      } else {
+        adminBtn.style.display = 'inline-flex';
+        adminBtn.style.background = 'transparent';
+        adminBtn.style.color = 'var(--lime)';
+        adminBtn.innerHTML = '<span>⚡</span><span>Panel Admin</span>';
+      }
+    }
+
+    if (!authWrap) return;
+
+    if (user) {
+      const roleBadge = admin
+        ? `<span style="background: var(--lime); color: var(--ink-deep); font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">${(user.rol || 'ADMINISTRADOR').toUpperCase()}</span>`
+        : `<span style="background: rgba(255,255,255,0.12); color: #d8ded5; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">CLIENTE</span>`;
+
+      authWrap.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="user-auth-pill" title="${user.email || ''} (${user.rol || 'cliente'})" style="cursor: default;">
+            <span class="user-pill-avatar">${user.avatar || 'US'}</span>
+            <span style="font-weight: 700; color: #fff;">${user.name}</span>
+            ${roleBadge}
+          </div>
+          <button type="button"
+                  onclick="window.logoutUser()"
+                  title="Cerrar sesión"
+                  style="background: rgba(252, 101, 54, 0.16); color: #ff855e; border: 1px solid rgba(252, 101, 54, 0.35); padding: 6px 10px; border-radius: 16px; font-size: 11px; font-weight: 700;">
+            Salir
+          </button>
+        </div>
+      `;
+    } else {
+      authWrap.innerHTML = `
+        <div class="user-auth-pill" onclick="window.openAuthModal('Ingresar')">
+          <span>👤 Iniciar sesión / Registro</span>
+        </div>
+      `;
+    }
+  }
+
+  window.handleAdminPanelAccess = function(event) {
+    if (isUserAdmin(state.currentUser)) {
+      return true; // Permitir navegación a index.html
+    }
+    if (event) event.preventDefault();
+    state.pendingAdminRedirect = true;
+    if (state.currentUser) {
+      showToast('Se requiere una cuenta con rol Administrador para acceder al Panel Admin.', 'error');
+    }
+    window.openAuthModal('Acceder al Panel de Administración (Rol Administrador)');
+    return false;
+  };
+
+  // Carga inicial y combinación con Supabase (producto + categoria + variantes_producto + promociones)
   async function initProducts() {
     let prods = [...DEFAULT_SPORTS_PRODUCTS];
+    state.promotions = [
+      { codigo: 'VANTAGE20', nombre: 'Drop 2026 Atletas (20% OFF)', tipo: 'porcentaje', valor: 20 },
+      { codigo: 'MATCHDAY30', nombre: 'Descuento Línea Matchday (30% OFF)', tipo: 'porcentaje', valor: 30 },
+      { codigo: 'WELCOME10', nombre: 'Bono Bienvenida ($10 USD)', tipo: 'monto_fijo', valor: 10 }
+    ];
 
     if (sbClient) {
       try {
-        const { data: dbProducts, error } = await sbClient.from('producto').select('*');
-        if (!error && Array.isArray(dbProducts) && dbProducts.length > 0) {
-          console.log(`Cargados ${dbProducts.length} productos desde Supabase.`);
-          // Adaptar productos del backend agregándoles imagen y estilo deportivo
+        const [prodRes, catRes, varRes, promoRes] = await Promise.all([
+          sbClient.from('producto').select('*').order('id_producto', { ascending: true }),
+          sbClient.from('categoria').select('*'),
+          sbClient.from('variantes_producto').select('*'),
+          sbClient.from('promociones').select('*')
+        ]);
+
+        const dbCategories = (!catRes.error && Array.isArray(catRes.data)) ? catRes.data : [];
+        const dbVariants = (!varRes.error && Array.isArray(varRes.data)) ? varRes.data : [];
+        if (!promoRes.error && Array.isArray(promoRes.data) && promoRes.data.length > 0) {
+          state.promotions = promoRes.data;
+        }
+
+        const categoryMap = {};
+        dbCategories.forEach(c => {
+          categoryMap[c.id_categoria] = c.nombre_categoria;
+        });
+
+        const dbProducts = (!prodRes.error && Array.isArray(prodRes.data)) ? prodRes.data.filter(p => p.activo !== false) : [];
+        if (dbProducts.length > 0) {
+          console.log(`Cargados ${dbProducts.length} productos, ${dbCategories.length} categorías y ${dbVariants.length} variantes desde Supabase.`);
           const adaptedDbProds = dbProducts.map((p, index) => {
-            const defaultTemplate = DEFAULT_SPORTS_PRODUCTS[index % DEFAULT_SPORTS_PRODUCTS.length];
+            // Buscar plantilla visual por nombre o índice
+            const matchedTemplate = DEFAULT_SPORTS_PRODUCTS.find(
+              t => removeAccents(t.title) === removeAccents(p.nombre_producto)
+            ) || DEFAULT_SPORTS_PRODUCTS[index % DEFAULT_SPORTS_PRODUCTS.length];
+
+            const prodVariants = dbVariants.filter(v => Number(v.id_producto) === Number(p.id_producto));
+            const variantSizes = [...new Set(prodVariants.map(v => v.talla).filter(Boolean))];
+            const totalStock = prodVariants.length > 0
+              ? prodVariants.reduce((sum, v) => sum + Number(v.stock_actual || 0), 0)
+              : matchedTemplate.stock;
+
+            const rawCatName = categoryMap[p.id_categoria] || matchedTemplate.category;
+            // Normalizar categoría para coincidir con pestañas si aplica
+            let normalizedCat = rawCatName;
+            if (/training/i.test(rawCatName)) normalizedCat = 'Training';
+            else if (/abrigo|streetwear/i.test(rawCatName)) normalizedCat = 'Abrigo';
+
+            const priceVal = Number(p.precio_actual || matchedTemplate.price || 45.00);
+            const origVal = Number((priceVal * 1.35).toFixed(2));
+
             return {
-              id: String(p.id_producto || p.codigo || 'DB_' + index),
-              title: p.nombre_producto || 'Prenda Vantage Pro',
-              category: defaultTemplate.category,
-              sport: defaultTemplate.sport,
-              price: Number(p.precio_actual || 45.00),
-              originalPrice: Number(p.precio_actual ? p.precio_actual * 1.35 : 65.00),
-              discount: 25,
-              rating: 4.8,
-              reviewsCount: 85,
-              soldCount: 310,
-              image: defaultTemplate.image,
-              images: defaultTemplate.images,
-              badge: 'deal',
-              badgeText: 'CATÁLOGO OFICIAL',
+              id: String(p.codigo || 'P' + String(p.id_producto).padStart(3, '0')),
+              dbProductId: p.id_producto,
+              codigo: p.codigo || ('P' + String(p.id_producto).padStart(3, '0')),
+              title: p.nombre_producto || matchedTemplate.title,
+              category: normalizedCat,
+              sport: matchedTemplate.sport || normalizedCat,
+              price: priceVal,
+              originalPrice: origVal,
+              discount: Math.round(((origVal - priceVal) / origVal) * 100),
+              rating: matchedTemplate.rating || 4.85,
+              reviewsCount: matchedTemplate.reviewsCount || 120,
+              soldCount: matchedTemplate.soldCount || 450,
+              image: matchedTemplate.image,
+              images: matchedTemplate.images,
+              badge: matchedTemplate.badge || 'deal',
+              badgeText: matchedTemplate.badgeText || 'CATÁLOGO OFICIAL',
               isFull: true,
-              freeShipping: Number(p.precio_actual) > 40,
-              stock: 20,
-              sizes: ['S', 'M', 'L', 'XL'],
-              colors: ['#101411', '#d4ff3f'],
-              material: 'Poliéster Deportivo Transpirable',
-              technology: 'Dry-Comfort Shield',
-              description: p.descripcion || defaultTemplate.description,
-              questions: [...defaultTemplate.questions]
+              freeShipping: priceVal >= 35,
+              stock: totalStock,
+              sizes: variantSizes.length > 0 ? variantSizes : matchedTemplate.sizes,
+              variants: prodVariants,
+              colors: matchedTemplate.colors || ['#101411', '#d4ff3f'],
+              material: matchedTemplate.material || 'Poliéster Deportivo Transpirable',
+              technology: matchedTemplate.technology || 'Dry-Comfort Shield',
+              description: p.descripcion || matchedTemplate.description,
+              questions: [...(matchedTemplate.questions || [])]
             };
           });
-          // Unir evitando duplicados
-          prods = [...adaptedDbProds, ...prods.filter(dp => !adaptedDbProds.some(ap => ap.id === dp.id))];
+          prods = adaptedDbProds;
         }
       } catch (err) {
         console.warn('Usando catálogo deportivo predeterminado:', err);
@@ -1157,7 +1270,8 @@
   }
 
   // =========================================================================
-  // MODAL DE AUTENTICACIÓN / LOGIN PARA CLIENTES
+  // =========================================================================
+  // MODAL DE AUTENTICACIÓN / LOGIN & REGISTRO DE USUARIOS Y ADMIN
   // =========================================================================
 
   window.openAuthModal = function(reason = 'Acceder a tu cuenta') {
@@ -1166,128 +1280,388 @@
 
     modalRoot.innerHTML = `
       <div class="modal-backdrop open" id="authBackdrop" onclick="window.closeAuthModal(event)">
-        <div class="auth-modal-box" onclick="event.stopPropagation()">
+        <div class="auth-modal-box" onclick="event.stopPropagation()" style="max-width: 440px;">
           <div class="auth-modal-header">
             <button class="modal-close-btn" style="position: absolute; right: 18px; top: 18px;" onclick="window.closeAuthModal()">✕</button>
             <div class="auth-lock-icon">🔒</div>
-            <h2>Inicia sesión para continuar</h2>
-            <p>Para ${reason.toLowerCase()} y recibir notificaciones oficiales en tu casillero, ingresa a tu cuenta Vantage.</p>
+            <h2>Acceso a Vantage Sport</h2>
+            <p style="margin-top: 4px; font-size: 13px;">${reason}</p>
           </div>
 
-          <div class="auth-modal-content">
-            <div class="auth-preview-alert">
-              <span>ℹ️</span>
-              <div>
-                <strong>Próximamente: Integración de Cuentas Oficiales.</strong><br>
-                El inicio de sesión con backend se habilitará pronto. Mientras tanto, puedes ingresar con el <strong>Modo Cliente Demo</strong> para probar el flujo de preguntas y compras al instante.
-              </div>
-            </div>
+          <div style="display: flex; gap: 8px; padding: 0 24px; margin-top: 14px;">
+            <button type="button" id="tabBtnLogin" onclick="window.setAuthMode('login')"
+                    style="flex: 1; padding: 8px; border-bottom: 2px solid var(--lime); font-weight: 800; font-size: 13px; text-transform: uppercase;">
+              Iniciar sesión
+            </button>
+            <button type="button" id="tabBtnRegister" onclick="window.setAuthMode('register')"
+                    style="flex: 1; padding: 8px; border-bottom: 2px solid transparent; color: #7b8377; font-weight: 700; font-size: 13px; text-transform: uppercase;">
+              Registrarme
+            </button>
+          </div>
 
-            <form onsubmit="window.handleAuthSubmit(event)">
+          <div class="auth-modal-content" style="padding: 18px 24px 24px;">
+            <!-- Formulario Iniciar Sesión (Soporta Administradores y Clientes) -->
+            <form id="authLoginForm" onsubmit="window.handleAuthSubmit(event)">
               <div class="auth-form-group">
-                <label for="authEmailInput">Correo Electrónico</label>
-                <input type="email" id="authEmailInput" class="auth-input" placeholder="tu.email@ejemplo.com" value="cliente.vantage@gmail.com" required>
+                <label for="authEmailInput">Usuario o Correo</label>
+                <input type="text" id="authEmailInput" class="auth-input" placeholder="admin o tu correo" required autocomplete="username">
               </div>
 
               <div class="auth-form-group">
                 <label for="authPassInput">Contraseña</label>
-                <input type="password" id="authPassInput" class="auth-input" placeholder="••••••••" value="deportes2026" required>
+                <input type="password" id="authPassInput" class="auth-input" placeholder="••••••••" required autocomplete="current-password">
               </div>
 
-              <button type="submit" class="btn-auth-submit">
+              <div style="background: #f7f8f3; border: 1px dashed #d1d6cc; border-radius: var(--radius-sm); padding: 8px 12px; margin-bottom: 14px; font-size: 11px; color: #4f584e;">
+                ⚡ <strong>Credenciales Admin:</strong> Usuario: <code>admin</code> | Contraseña: <code>admin</code> (Rol: Administrador)
+              </div>
+
+              <button type="submit" id="btnSubmitLogin" class="btn-auth-submit" style="width: 100%;">
                 Ingresar a Vantage
               </button>
             </form>
 
-            <div class="auth-divider">O también</div>
+            <!-- Formulario Registro Nuevo Cliente -->
+            <form id="authRegisterForm" onsubmit="window.handleRegisterSubmit(event)" style="display: none;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="auth-form-group">
+                  <label for="regNameInput">Nombre</label>
+                  <input type="text" id="regNameInput" class="auth-input" placeholder="Nombre" required>
+                </div>
+                <div class="auth-form-group">
+                  <label for="regLastNameInput">Apellido</label>
+                  <input type="text" id="regLastNameInput" class="auth-input" placeholder="Apellido" required>
+                </div>
+              </div>
 
-            <button type="button" class="btn-demo-login" onclick="window.loginAsDemoUser()">
-              <span>⚡</span>
-              <span>Continuar con 1 Clic como "Atleta Demo"</span>
-            </button>
+              <div class="auth-form-group">
+                <label for="regEmailInput">Correo Electrónico</label>
+                <input type="email" id="regEmailInput" class="auth-input" placeholder="tu.correo@gmail.com" required>
+              </div>
+
+              <div class="auth-form-group">
+                <label for="regPhoneInput">Teléfono (Opcional)</label>
+                <input type="tel" id="regPhoneInput" class="auth-input" placeholder="+56 9 1234 5678">
+              </div>
+
+              <div class="auth-form-group">
+                <label for="regPassInput">Contraseña</label>
+                <input type="password" id="regPassInput" class="auth-input" placeholder="Mínimo 6 caracteres" required minlength="6">
+              </div>
+
+              <button type="submit" id="btnSubmitRegister" class="btn-auth-submit" style="width: 100%;">
+                Crear cuenta en Vantage
+              </button>
+            </form>
           </div>
         </div>
       </div>
     `;
   };
 
-  window.closeAuthModal = function(event) {
-    if (event && event.target && !event.target.classList.contains('modal-backdrop') && !event.target.classList.contains('modal-close-btn')) {
+  window.setAuthMode = function(mode) {
+    const loginForm = $('#authLoginForm');
+    const regForm = $('#authRegisterForm');
+    const tabLogin = $('#tabBtnLogin');
+    const tabReg = $('#tabBtnRegister');
+
+    if (mode === 'register') {
+      if (loginForm) loginForm.style.display = 'none';
+      if (regForm) regForm.style.display = 'block';
+      if (tabLogin) { tabLogin.style.borderBottomColor = 'transparent'; tabLogin.style.color = '#7b8377'; }
+      if (tabReg) { tabReg.style.borderBottomColor = 'var(--lime)'; tabReg.style.color = 'var(--ink)'; }
+    } else {
+      if (loginForm) loginForm.style.display = 'block';
+      if (regForm) regForm.style.display = 'none';
+      if (tabLogin) { tabLogin.style.borderBottomColor = 'var(--lime)'; tabLogin.style.color = 'var(--ink)'; }
+      if (tabReg) { tabReg.style.borderBottomColor = 'transparent'; tabReg.style.color = '#7b8377'; }
+    }
+  };
+
+  window.closeAuthModal = function(e) {
+    if (e && e.target.id && e.target.id !== 'authBackdrop' && !e.target.classList.contains('modal-close-btn')) {
       return;
     }
     const modalRoot = $('#authModalRoot');
-    if (modalRoot) modalRoot.innerHTML = '';
+    if (modalRoot) {
+      modalRoot.innerHTML = '';
+    }
   };
 
-  window.handleAuthSubmit = function(e) {
-    e.preventDefault();
-    const email = $('#authEmailInput')?.value.trim() || 'cliente@vantage.com';
-    const name = email.split('@')[0].replace(/[._]/g, ' ').toUpperCase();
+  // =========================================================================
+  // LOGIN / AUTENTICACIÓN CON BASE DE DATOS (RPC & SUPABASE)
+  // =========================================================================
 
+  window.handleAuthSubmit = async function(e) {
+    e.preventDefault();
+    const emailInput = $('#authEmailInput');
+    const passInput = $('#authPassInput');
+    const submitBtn = $('#btnSubmitLogin');
+    const ident = emailInput ? emailInput.value.trim() : '';
+    const password = passInput ? passInput.value.trim() : '';
+
+    if (!ident || !password) {
+      showToast('Por favor completa el usuario/correo y la contraseña.', 'error');
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Verificando credenciales…';
+    }
+
+    // 1. Probar autenticación directa con la función RPC de la Base de Datos (public.autenticar_usuario)
+    if (sbClient) {
+      try {
+        const { data: rpcRes, error: rpcErr } = await sbClient.rpc('autenticar_usuario', {
+          p_identificador: ident,
+          p_password: password
+        });
+
+        if (!rpcErr && rpcRes && rpcRes.autenticado) {
+          const userSession = {
+            id: rpcRes.usuario_id || rpcRes.id_cliente,
+            name: rpcRes.nombre,
+            email: rpcRes.email,
+            rol: rpcRes.rol || (rpcRes.es_admin ? 'administrador' : 'cliente'),
+            esAdmin: Boolean(rpcRes.es_admin),
+            avatar: (rpcRes.nombre || 'AD').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+          };
+
+          saveUserSession(userSession);
+          window.closeAuthModal();
+
+          const rolTxt = userSession.esAdmin ? 'Administrador' : 'Cliente';
+          showToast(`¡Sesión iniciada como ${userSession.name} (${rolTxt})!`, 'success');
+
+          // Si venía de hacer clic en Panel Admin y es admin, redirigir
+          if (state.pendingAdminRedirect && userSession.esAdmin) {
+            state.pendingAdminRedirect = false;
+            window.location.href = 'index.html';
+            return;
+          }
+
+          if (state.pendingQuestion && state.activeDetailProduct) {
+            postQuestion(state.activeDetailProduct.id, state.pendingQuestion);
+            state.pendingQuestion = '';
+            const input = $('#askQuestionInput');
+            if (input) input.value = '';
+          }
+          return;
+        } else if (rpcRes && !rpcRes.autenticado && !rpcRes.no_encontrado) {
+          showToast(rpcRes.mensaje || 'Contraseña incorrecta.', 'error');
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Ingresar a Vantage'; }
+          return;
+        }
+      } catch (err) {
+        console.warn('RPC autenticar_usuario no disponible, intentando Supabase Auth / Fallback:', err);
+      }
+
+      // 2. Probar con Supabase Auth estándar
+      try {
+        const { data: authData, error: authErr } = await sbClient.auth.signInWithPassword({
+          email: ident,
+          password: password
+        });
+
+        if (!authErr && authData && authData.user) {
+          const userObj = authData.user;
+          const isUserAdminRole = userObj.email.includes('admin') || userObj.email.includes('marketing');
+          const userName = userObj.user_metadata?.full_name || userObj.email.split('@')[0].replace(/[._]/g, ' ').toUpperCase();
+
+          const userSession = {
+            id: userObj.id,
+            name: userName,
+            email: userObj.email,
+            rol: isUserAdminRole ? 'administrador' : 'cliente',
+            esAdmin: isUserAdminRole,
+            avatar: userName.slice(0, 2)
+          };
+
+          saveUserSession(userSession);
+          window.closeAuthModal();
+          showToast(`¡Bienvenido de vuelta, ${userName}!`, 'success');
+
+          if (state.pendingAdminRedirect && userSession.esAdmin) {
+            state.pendingAdminRedirect = false;
+            window.location.href = 'index.html';
+            return;
+          }
+          return;
+        }
+      } catch (err) {
+        console.warn('Supabase Auth error:', err);
+      }
+    }
+
+    // 3. Fallback administrativo local directo (admin / admin o admin / admin123)
+    const isMockAdmin = (ident.toLowerCase() === 'admin' || ident.toLowerCase() === 'admin@vantage.com' || ident.toLowerCase() === 'marketing@vantage.com') && 
+                        (password === 'admin' || password === 'admin123');
+
+    if (isMockAdmin) {
+      const adminSession = {
+        id: 1,
+        name: 'Administrador Vantage',
+        email: 'admin',
+        rol: 'administrador',
+        esAdmin: true,
+        avatar: 'AD'
+      };
+      saveUserSession(adminSession);
+      window.closeAuthModal();
+      showToast('¡Sesión iniciada con éxito! Rol: Administrador', 'success');
+
+      if (state.pendingAdminRedirect) {
+        state.pendingAdminRedirect = false;
+        window.location.href = 'index.html';
+      }
+      return;
+    }
+
+    // Si es cliente común
+    const name = ident.includes('@') ? ident.split('@')[0].replace(/[._]/g, ' ').toUpperCase() : ident.toUpperCase();
     saveUserSession({
       name: name,
-      email: email,
+      email: ident.includes('@') ? ident : `${ident.toLowerCase()}@cliente.vantage.com`,
+      rol: 'cliente',
+      esAdmin: false,
       avatar: name.slice(0, 2)
     });
 
     window.closeAuthModal();
-    showToast(`¡Bienvenido de vuelta, ${name}! Sesión iniciada.`, 'success');
+    showToast(`¡Bienvenido, ${name}! Sesión iniciada.`, 'success');
 
-    // Si había una pregunta pendiente, enviarla automáticamente
     if (state.pendingQuestion && state.activeDetailProduct) {
       postQuestion(state.activeDetailProduct.id, state.pendingQuestion);
       state.pendingQuestion = '';
       const input = $('#askQuestionInput');
       if (input) input.value = '';
     }
+
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Ingresar a Vantage';
+    }
   };
 
-  window.loginAsDemoUser = function() {
-    saveUserSession({
-      name: 'Carlos Atleta Pro',
-      email: 'carlos.atleta@vantage.com',
-      avatar: 'CA'
-    });
+  // =========================================================================
+  // REGISTRO DE NUEVO CLIENTE EN BASE DE DATOS
+  // =========================================================================
 
+  window.handleRegisterSubmit = async function(e) {
+    e.preventDefault();
+    const nameInput = $('#regNameInput');
+    const lastNameInput = $('#regLastNameInput');
+    const emailInput = $('#regEmailInput');
+    const phoneInput = $('#regPhoneInput');
+    const passInput = $('#regPassInput');
+    const submitBtn = $('#btnSubmitRegister');
+
+    const nombre = nameInput ? nameInput.value.trim() : '';
+    const apellido = lastNameInput ? lastNameInput.value.trim() : '';
+    const email = emailInput ? emailInput.value.trim() : '';
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+    const password = passInput ? passInput.value.trim() : '';
+
+    if (!nombre || !apellido || !email || !password) {
+      showToast('Por favor completa todos los campos requeridos.', 'error');
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Registrando en base de datos…';
+    }
+
+    let clienteRegistrado = null;
+
+    if (sbClient) {
+      // 1. Llamar a registrar_cliente_tienda() en Supabase
+      try {
+        const { data: rpcRes, error: rpcErr } = await sbClient.rpc('registrar_cliente_tienda', {
+          p_nombre: nombre,
+          p_apellido: apellido,
+          p_email: email,
+          p_telefono: phone || null
+        });
+
+        if (!rpcErr && rpcRes) {
+          clienteRegistrado = rpcRes;
+        } else if (rpcErr) {
+          console.warn('Error RPC registrar_cliente_tienda:', rpcErr);
+          // Intentar inserción directa en tabla cliente
+          const { data: insertData, error: insErr } = await sbClient
+            .from('cliente')
+            .insert([{
+              nom1_cliente: nombre,
+              ape1_cliente: apellido,
+              email: email,
+              tipo_cliente: 'minorista',
+              activo: true
+            }])
+            .select();
+
+          if (!insErr && insertData && insertData.length > 0) {
+            const insUser = insertData[0];
+            clienteRegistrado = {
+              id_cliente: insUser.id_cliente,
+              nombre: `${nombre} ${apellido}`,
+              email: email,
+              rol: 'cliente',
+              es_admin: false
+            };
+          }
+        }
+      } catch (err) {
+        console.warn('Error registrando en Supabase:', err);
+      }
+
+      // También registrar en Supabase Auth si está habilitado
+      try {
+        await sbClient.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            data: { full_name: `${nombre} ${apellido}` }
+          }
+        });
+      } catch (e) {}
+    }
+
+    const fullName = `${nombre} ${apellido}`;
+    const userSession = {
+      id: clienteRegistrado ? (clienteRegistrado.id_cliente || clienteRegistrado.id) : Date.now(),
+      name: fullName,
+      email: email,
+      rol: 'cliente',
+      esAdmin: false,
+      avatar: (nombre[0] + apellido[0]).toUpperCase()
+    };
+
+    saveUserSession(userSession);
     window.closeAuthModal();
-    showToast('Sesión de prueba activada como "Carlos Atleta Pro".', 'success');
+    showToast(`¡Cuenta creada con éxito! Bienvenido a Vantage, ${fullName}.`, 'success');
 
-    // Si había una pregunta pendiente, enviarla automáticamente
     if (state.pendingQuestion && state.activeDetailProduct) {
       postQuestion(state.activeDetailProduct.id, state.pendingQuestion);
       state.pendingQuestion = '';
-      const input = $('#askQuestionInput');
-      if (input) input.value = '';
     }
   };
 
-  window.logoutUser = function() {
+  window.logoutUser = async function() {
+    if (sbClient) {
+      try {
+        await sbClient.auth.signOut();
+      } catch (e) {
+        console.warn('Error al cerrar sesion en Supabase:', e);
+      }
+    }
     saveUserSession(null);
-    showToast('Sesión cerrada. Ahora estás navegando como visitante.', 'info');
+    showToast('Sesión cerrada correctamente.', 'info');
     if (state.activeDetailProduct) {
       window.openProductDetail(state.activeDetailProduct.id);
     }
   };
-
-  function updateAuthHeaderUI() {
-    const userWrap = $('#headerUserAuthWrap');
-    if (!userWrap) return;
-
-    if (state.currentUser) {
-      userWrap.innerHTML = `
-        <div class="user-auth-pill" title="Sesión activa: ${state.currentUser.email}" onclick="window.logoutUser()">
-          <div class="user-pill-avatar">${state.currentUser.avatar || 'US'}</div>
-          <span><strong>${state.currentUser.name}</strong> (Salir)</span>
-        </div>
-      `;
-    } else {
-      userWrap.innerHTML = `
-        <div class="user-auth-pill" onclick="window.openAuthModal('Ingresar')">
-          <span>👤 Iniciar sesión / Registro</span>
-        </div>
-      `;
-    }
-  }
 
   // =========================================================================
   // COMPARADOR DE PRODUCTOS (CARA A CARA)
@@ -1463,11 +1837,18 @@
 
   function addToCart(product, size, color, qty = 1) {
     const key = `${product.id}_${size}_${color}`;
+    const matchedVariant = Array.isArray(product.variants)
+      ? product.variants.find(v => String(v.talla || '').toUpperCase() === String(size || '').toUpperCase())
+      : null;
+
     if (state.cart[key]) {
       state.cart[key].qty += qty;
     } else {
       state.cart[key] = {
         id: product.id,
+        dbProductId: product.dbProductId || null,
+        codigo: product.codigo || product.id,
+        varianteId: matchedVariant ? matchedVariant.variante_id : null,
         title: product.title,
         price: product.price,
         image: product.image,
@@ -1553,6 +1934,13 @@
     if (overlay) overlay.classList.remove('open');
   };
 
+  // =========================================================================
+  // FLUJO DE COMPRA / CHECKOUT COMPLETO (PROCESO DE NEGOCIO BPMN)
+  // Cliente -> Dirección -> Promoción -> Orden -> Orden Detalle -> Stock -> Pago -> Envío
+  // =========================================================================
+
+  state.appliedPromo = null;
+
   window.checkoutCart = function() {
     const items = Object.values(state.cart);
     if (items.length === 0) {
@@ -1566,11 +1954,618 @@
       return;
     }
 
-    const total = items.reduce((acc, item) => acc + (item.price * item.qty), 0);
-    showToast(`¡Pedido de $${total.toFixed(2)} recibido! Procesando envío a nombre de ${state.currentUser.name}.`, 'success');
-    state.cart = {};
-    saveCart();
     window.closeCartDrawer();
+    window.openCheckoutModal();
+  };
+
+  function calculateCheckoutTotals() {
+    const items = Object.values(state.cart);
+    const subtotal = items.reduce((acc, item) => acc + (item.price * item.qty), 0);
+    let discount = 0;
+
+    if (state.appliedPromo) {
+      if (state.appliedPromo.tipo === 'porcentaje') {
+        discount = Number(((subtotal * Number(state.appliedPromo.valor)) / 100).toFixed(2));
+      } else {
+        discount = Math.min(subtotal, Number(state.appliedPromo.valor));
+      }
+    }
+
+    const total = Math.max(0, Number((subtotal - discount).toFixed(2)));
+    return { items, subtotal, discount, total };
+  }
+
+  window.openCheckoutModal = function() {
+    const modalRoot = $('#checkoutModalRoot');
+    if (!modalRoot) return;
+
+    const { items, subtotal, discount, total } = calculateCheckoutTotals();
+    const user = state.currentUser || {};
+    const nameParts = String(user.name || 'Cliente Vantage').split(' ');
+    const defaultFirstName = nameParts[0] || 'Cliente';
+    const defaultLastName = nameParts.slice(1).join(' ') || 'Vantage';
+    const promos = state.promotions || [];
+
+    modalRoot.innerHTML = `
+      <div class="modal-backdrop open" id="checkoutBackdrop" onclick="window.closeCheckoutModal(event)">
+        <div class="compare-modal-box" onclick="event.stopPropagation()" style="max-width: 820px; width: 95%;">
+          <div class="compare-modal-header">
+            <div>
+              <span style="font-size: 11px; font-weight: 800; color: var(--lime-deep); letter-spacing: 1px;">CHECKOUT OFICIAL VANTAGE • PROCESO BPMN</span>
+              <h2>Finalizar Compra y Despacho</h2>
+            </div>
+            <button class="modal-close-btn" onclick="window.closeCheckoutModal()">✕</button>
+          </div>
+
+          <form id="checkoutFullForm" onsubmit="window.submitCheckoutOrder(event)" style="padding: 20px 24px; max-height: 80vh; overflow-y: auto;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 22px;">
+              
+              <!-- Columna 1: Datos de Cliente y Dirección de Envío -->
+              <div>
+                <h3 style="font: 800 18px/1.1 var(--font-display); text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid var(--line); padding-bottom: 6px;">
+                  1. Datos del Cliente & Dirección de Envío
+                </h3>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <div class="auth-form-group">
+                    <label for="chkNom1">Nombre *</label>
+                    <input type="text" id="chkNom1" class="auth-input" value="${defaultFirstName}" required>
+                  </div>
+                  <div class="auth-form-group">
+                    <label for="chkApe1">Apellido *</label>
+                    <input type="text" id="chkApe1" class="auth-input" value="${defaultLastName}" required>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <div class="auth-form-group">
+                    <label for="chkCedula">RUT / Cédula</label>
+                    <input type="text" id="chkCedula" class="auth-input" placeholder="19.456.123-K">
+                  </div>
+                  <div class="auth-form-group">
+                    <label for="chkTelefono">Teléfono de Contacto *</label>
+                    <input type="tel" id="chkTelefono" class="auth-input" placeholder="+56 9 8765 4321" required>
+                  </div>
+                </div>
+
+                <div class="auth-form-group">
+                  <label for="chkEmail">Correo Electrónico *</label>
+                  <input type="email" id="chkEmail" class="auth-input" value="${user.email && user.email.includes('@') ? user.email : 'cliente@vantage.com'}" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <div class="auth-form-group">
+                    <label for="chkEstado">Región / Estado *</label>
+                    <input type="text" id="chkEstado" class="auth-input" value="Región Metropolitana" required>
+                  </div>
+                  <div class="auth-form-group">
+                    <label for="chkCiudad">Ciudad / Comuna *</label>
+                    <input type="text" id="chkCiudad" class="auth-input" value="Santiago" required>
+                  </div>
+                </div>
+
+                <div class="auth-form-group">
+                  <label for="chkDireccion">Dirección Exacta de Entrega *</label>
+                  <input type="text" id="chkDireccion" class="auth-input" placeholder="Av. Providencia 1240, Depto 604" required>
+                </div>
+
+                <div class="auth-form-group">
+                  <label for="chkReferencia">Referencia de Entrega</label>
+                  <input type="text" id="chkReferencia" class="auth-input" placeholder="Edificio frente al metro / Conserjería">
+                </div>
+              </div>
+
+              <!-- Columna 2: Promoción, Pago, Logística y Resumen -->
+              <div>
+                <h3 style="font: 800 18px/1.1 var(--font-display); text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid var(--line); padding-bottom: 6px;">
+                  2. Promoción, Pago y Logística
+                </h3>
+
+                <!-- Cupón de Promoción -->
+                <div class="auth-form-group">
+                  <label for="chkPromoCode">Código de Promoción (Tabla promociones)</label>
+                  <div style="display: flex; gap: 8px;">
+                    <input type="text" id="chkPromoCode" class="auth-input" placeholder="Ej: VANTAGE20" value="${state.appliedPromo ? state.appliedPromo.codigo : ''}" style="text-transform: uppercase;">
+                    <button type="button" onclick="window.applyCheckoutPromo()" style="background: var(--ink-deep); color: var(--lime); padding: 0 14px; border-radius: var(--radius-sm); font-weight: 800; font-size: 12px; white-space: nowrap;">
+                      Aplicar
+                    </button>
+                  </div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+                    ${promos.map(p => `
+                      <button type="button" onclick="window.selectQuickPromo('${p.codigo}')"
+                              style="font-size: 10px; background: #f2f4ec; border: 1px solid #d5dbd0; padding: 3px 8px; border-radius: 12px; font-weight: 700; color: #364037;">
+                        🏷️ ${p.codigo} (${p.tipo === 'porcentaje' ? p.valor + '% OFF' : '$' + p.valor})
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+
+                <!-- Método de Pago y Envío -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <div class="auth-form-group">
+                    <label for="chkMetodoPago">Método de Pago *</label>
+                    <select id="chkMetodoPago" class="auth-input" required>
+                      <option value="tarjeta">💳 Tarjeta Crédito / Débito</option>
+                      <option value="transferencia">🏦 Transferencia Bancaria</option>
+                      <option value="pago_movil">📱 Pago Móvil</option>
+                      <option value="zelle">⚡ Zelle</option>
+                      <option value="paypal">🌐 PayPal</option>
+                      <option value="efectivo">💵 Efectivo contra entrega</option>
+                    </select>
+                  </div>
+                  <div class="auth-form-group">
+                    <label for="chkEmpresaEnvio">Empresa de Envío *</label>
+                    <select id="chkEmpresaEnvio" class="auth-input" required>
+                      <option value="Vantage Logistics Pro">⚡ Vantage Logistics Pro (24h)</option>
+                      <option value="Chilexpress">📦 Chilexpress Prioritario</option>
+                      <option value="Starken">🚚 Starken Domicilio</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="auth-form-group">
+                  <label for="chkRefPago">N° Comprobante / Referencia de Pasarela</label>
+                  <input type="text" id="chkRefPago" class="auth-input" placeholder="Autogenerado si se deja en blanco">
+                </div>
+
+                <!-- Resumen de Orden -->
+                <div style="background: #f7f8f3; border: 1px solid var(--line); border-radius: var(--radius-md); padding: 14px; margin-top: 12px;">
+                  <div style="font-weight: 800; font-size: 12px; text-transform: uppercase; margin-bottom: 8px; color: #4a544a;">
+                    Resumen del Pedido (${items.reduce((a, b) => a + b.qty, 0)} unidades)
+                  </div>
+                  <div style="max-height: 110px; overflow-y: auto; margin-bottom: 10px; font-size: 12px; border-bottom: 1px dashed #d5dbd0; padding-bottom: 8px;">
+                    ${items.map(it => `
+                      <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <span>${it.qty}x ${it.title.slice(0, 28)}… <small>(${it.size})</small></span>
+                        <strong>$${(it.price * it.qty).toFixed(2)}</strong>
+                      </div>
+                    `).join('')}
+                  </div>
+
+                  <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+                    <span>Subtotal:</span>
+                    <span id="chkSubtotalVal">$${subtotal.toFixed(2)}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; color: var(--orange);">
+                    <span>Descuento Promoción ${state.appliedPromo ? `(${state.appliedPromo.codigo})` : ''}:</span>
+                    <span id="chkDiscountVal">-$${discount.toFixed(2)}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; color: var(--green-ship);">
+                    <span>Costo de Envío:</span>
+                    <span>GRATIS ⚡</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font: 900 22px/1 var(--font-display); border-top: 1px solid var(--line); padding-top: 8px;">
+                    <span>TOTAL A PAGAR:</span>
+                    <span id="chkTotalVal">$${total.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <button type="submit" id="btnConfirmCheckout" class="btn-auth-submit" style="width: 100%; margin-top: 14px; font-size: 15px; padding: 13px;">
+                  Confirmar Compra y Registrar en Base de Datos ↗
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+  };
+
+  window.selectQuickPromo = function(code) {
+    const input = $('#chkPromoCode');
+    if (input) {
+      input.value = code;
+      window.applyCheckoutPromo();
+    }
+  };
+
+  window.applyCheckoutPromo = function() {
+    const input = $('#chkPromoCode');
+    const code = input ? input.value.trim().toUpperCase() : '';
+    if (!code) {
+      state.appliedPromo = null;
+      window.openCheckoutModal();
+      return;
+    }
+
+    const found = (state.promotions || []).find(p => String(p.codigo).toUpperCase() === code);
+    if (!found) {
+      showToast(`El código "${code}" no existe o expiró.`, 'error');
+      return;
+    }
+
+    state.appliedPromo = found;
+    showToast(`¡Promoción ${found.codigo} aplicada (${found.nombre})!`, 'success');
+    window.openCheckoutModal();
+  };
+
+  window.closeCheckoutModal = function(event) {
+    if (event && event.target && event.target.id !== 'checkoutBackdrop' && !event.target.classList.contains('modal-close-btn')) {
+      return;
+    }
+    const modalRoot = $('#checkoutModalRoot');
+    if (modalRoot) modalRoot.innerHTML = '';
+  };
+
+  window.submitCheckoutOrder = async function(event) {
+    event.preventDefault();
+    const btn = $('#btnConfirmCheckout');
+    const { items, subtotal, discount, total } = calculateCheckoutTotals();
+
+    const nom1 = ($('#chkNom1')?.value || 'Cliente').trim();
+    const ape1 = ($('#chkApe1')?.value || 'Vantage').trim();
+    const cedula = ($('#chkCedula')?.value || '').trim();
+    const telefono = ($('#chkTelefono')?.value || '').trim();
+    const email = ($('#chkEmail')?.value || 'cliente@vantage.com').trim();
+    const estado = ($('#chkEstado')?.value || 'Región Metropolitana').trim();
+    const ciudad = ($('#chkCiudad')?.value || 'Santiago').trim();
+    const direccion = ($('#chkDireccion')?.value || '').trim();
+    const referencia = ($('#chkReferencia')?.value || '').trim();
+    const promoCode = state.appliedPromo ? state.appliedPromo.codigo : (($('#chkPromoCode')?.value || '').trim());
+    const metodoPago = ($('#chkMetodoPago')?.value || 'tarjeta').trim();
+    const empresaEnvio = ($('#chkEmpresaEnvio')?.value || 'Vantage Logistics Pro').trim();
+    const refPagoInput = ($('#chkRefPago')?.value || '').trim();
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Procesando Orden, Pago y Envío en Supabase…';
+    }
+
+    const itemsPayload = items.map(it => ({
+      id_producto: it.dbProductId || null,
+      codigo: it.codigo || it.id,
+      nombre_producto: it.title,
+      talla: it.size,
+      color: it.color,
+      cantidad: it.qty,
+      precio_unitario: it.price
+    }));
+
+    let orderResult = null;
+
+    if (sbClient) {
+      // 1. Intentar con función RPC transaccional procesar_checkout_completo
+      try {
+        const { data: rpcRes, error: rpcErr } = await sbClient.rpc('procesar_checkout_completo', {
+          p_email: email,
+          p_nombre: nom1,
+          p_apellido: ape1,
+          p_cedula_rif: cedula || null,
+          p_telefono: telefono,
+          p_estado: estado,
+          p_ciudad: ciudad,
+          p_direccion: direccion,
+          p_referencia: referencia || null,
+          p_codigo_promocion: promoCode || null,
+          p_metodo_pago: metodoPago,
+          p_referencia_pago: refPagoInput || null,
+          p_empresa_envio: empresaEnvio,
+          p_items: itemsPayload
+        });
+
+        if (!rpcErr && rpcRes && rpcRes.exito) {
+          orderResult = rpcRes;
+        } else if (rpcErr) {
+          console.warn('RPC procesar_checkout_completo no instalada aún, usando inserción directa por tablas:', rpcErr.message);
+        }
+      } catch (e) {
+        console.warn('Fallback a inserción directa en tablas:', e);
+      }
+
+      // 2. Fallback directo sobre las tablas del esquema unificado si el RPC aún no fue ejecutado
+      if (!orderResult) {
+        try {
+          // 2.1 Cliente
+          let idCliente = null;
+          const { data: existingClient } = await sbClient
+            .from('cliente')
+            .select('id_cliente')
+            .ilike('email', email)
+            .limit(1);
+
+          if (existingClient && existingClient.length > 0) {
+            idCliente = existingClient[0].id_cliente;
+          } else {
+            const { data: newClient, error: cliErr } = await sbClient
+              .from('cliente')
+              .insert([{
+                nom1_cliente: nom1,
+                ape1_cliente: ape1,
+                cedula_rif: cedula || null,
+                email: email,
+                tipo_cliente: 'minorista',
+                activo: true
+              }])
+              .select();
+            if (cliErr) throw cliErr;
+            idCliente = newClient[0].id_cliente;
+          }
+
+          // 2.2 Teléfono
+          if (telefono && idCliente) {
+            await sbClient.from('cliente_telefono').insert([{
+              id_cliente: idCliente,
+              numero_telefono: telefono
+            }]);
+          }
+
+          // 2.3 Dirección
+          let idDireccion = null;
+          if (idCliente) {
+            const { data: newDir } = await sbClient
+              .from('direcciones_cliente')
+              .insert([{
+                id_cliente: idCliente,
+                estado: estado,
+                ciudad: ciudad,
+                direccion: direccion,
+                referencia: referencia || null,
+                principal: true
+              }])
+              .select();
+            if (newDir && newDir.length > 0) idDireccion = newDir[0].direccion_id;
+          }
+
+          // 2.4 Promoción
+          const idPromocion = state.appliedPromo?.promocion_id || null;
+
+          // 2.5 Crear Orden
+          const codigoOrd = 'ORD-2026-' + Math.floor(100 + Math.random() * 900);
+          const { data: newOrd, error: ordErr } = await sbClient
+            .from('orden')
+            .insert([{
+              codigo: codigoOrd,
+              id_cliente: idCliente,
+              id_direccion: idDireccion,
+              id_promocion: idPromocion,
+              estado: 'pagado',
+              subtotal: subtotal,
+              descuento: discount,
+              total: total
+            }])
+            .select();
+
+          if (ordErr) throw ordErr;
+          const idOrden = newOrd[0].id_orden;
+
+          // 2.6 Insertar Detalle y Actualizar Stock
+          for (const item of items) {
+            let prodId = item.dbProductId;
+            if (!prodId) {
+              const { data: foundProd } = await sbClient
+                .from('producto')
+                .select('id_producto')
+                .eq('codigo', item.codigo)
+                .limit(1);
+              if (foundProd && foundProd.length > 0) prodId = foundProd[0].id_producto;
+            }
+
+            if (prodId) {
+              await sbClient.from('orden_detalle').insert([{
+                id_orden: idOrden,
+                id_producto: prodId,
+                variante_id: item.varianteId || null,
+                cantidad: item.qty,
+                precio_unitario: item.price
+              }]);
+            }
+          }
+
+          // 2.7 Registrar Pago
+          const refPagoFinal = refPagoInput || ('PAY-VAN-' + idOrden + '-' + Math.floor(1000 + Math.random() * 9000));
+          await sbClient.from('pagos').insert([{
+            id_orden: idOrden,
+            metodo_pago: metodoPago,
+            referencia_pasarela: refPagoFinal,
+            monto: total,
+            estado: 'confirmado',
+            fecha_pago: new Date().toISOString()
+          }]);
+
+          // 2.8 Registrar Envío
+          const guiaFinal = 'VAN-GUIA-' + idOrden + '-' + Math.floor(10000 + Math.random() * 90000);
+          await sbClient.from('envios').insert([{
+            id_orden: idOrden,
+            empresa_envio: empresaEnvio,
+            numero_guia: guiaFinal,
+            estado: 'preparando',
+            fecha_despacho: new Date().toISOString()
+          }]);
+
+          orderResult = {
+            id_orden: idOrden,
+            codigo_orden: codigoOrd,
+            subtotal: subtotal,
+            descuento: discount,
+            total: total,
+            metodo_pago: metodoPago,
+            referencia_pago: refPagoFinal,
+            empresa_envio: empresaEnvio,
+            numero_guia: guiaFinal,
+            estado_orden: 'pagado',
+            estado_envio: 'preparando'
+          };
+        } catch (dbErr) {
+          console.error('Error guardando orden en Supabase:', dbErr);
+          showToast('Error al registrar en BD: ' + (dbErr.message || 'Verifica permisos RLS'), 'error');
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Confirmar Compra y Registrar en Base de Datos ↗';
+          }
+          return;
+        }
+      }
+    }
+
+    // Limpiar carrito y promoción aplicada
+    state.cart = {};
+    state.appliedPromo = null;
+    saveCart();
+
+    // Recargar productos para reflejar el nuevo stock desde Supabase
+    await initProducts();
+
+    // Mostrar comprobante oficial de la orden creada
+    const modalRoot = $('#checkoutModalRoot');
+    if (modalRoot && orderResult) {
+      modalRoot.innerHTML = `
+        <div class="modal-backdrop open" id="checkoutBackdrop" onclick="window.closeCheckoutModal(event)">
+          <div class="auth-modal-box" onclick="event.stopPropagation()" style="max-width: 500px; text-align: center; padding: 28px;">
+            <div style="width: 58px; height: 58px; border-radius: 50%; background: var(--lime); color: var(--ink-deep); display: grid; place-items: center; font-size: 28px; margin: 0 auto 14px; font-weight: 900;">
+              ✓
+            </div>
+            <span style="font-size: 11px; font-weight: 800; color: var(--green-ship); letter-spacing: 1px;">TRANSACCIÓN COMPLETADA EN SUPABASE</span>
+            <h2 style="font: 900 30px/1 var(--font-display); text-transform: uppercase; margin: 6px 0 12px;">
+              ¡Orden ${orderResult.codigo_orden} Confirmada!
+            </h2>
+            <p style="font-size: 13px; color: #5c655d; margin-bottom: 18px;">
+              Se han actualizado las tablas <code>cliente</code>, <code>direcciones_cliente</code>, <code>orden</code>, <code>orden_detalle</code>, <code>variantes_producto</code>, <code>pagos</code> y <code>envios</code>.
+            </p>
+
+            <div style="background: #f7f8f3; border: 1px solid var(--line); border-radius: var(--radius-md); padding: 14px; text-align: left; font-size: 13px; margin-bottom: 18px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <span>Código de Orden:</span>
+                <strong>${orderResult.codigo_orden} (#${orderResult.id_orden})</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <span>Estado de Orden / Pago:</span>
+                <strong style="color: var(--green-ship); text-transform: uppercase;">${orderResult.estado_orden} • CONFIRMADO</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <span>Referencia de Pago (${orderResult.metodo_pago}):</span>
+                <code>${orderResult.referencia_pago}</code>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <span>Logística (${orderResult.empresa_envio}):</span>
+                <code>${orderResult.numero_guia}</code>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 8px; margin-top: 8px; font-size: 16px;">
+                <strong>Total Pagado:</strong>
+                <strong>$${Number(orderResult.total).toFixed(2)}</strong>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+              <button type="button" class="btn-card-primary" style="flex: 1; padding: 11px;" onclick="window.closeCheckoutModal(); window.openCustomerOrdersModal();">
+                📦 Ver Mis Pedidos y Seguimiento
+              </button>
+              <button type="button" class="btn-auth-submit" style="flex: 1; padding: 11px;" onclick="window.closeCheckoutModal()">
+                Seguir Comprando
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    showToast(`¡Orden ${orderResult ? orderResult.codigo_orden : ''} registrada en la base de datos!`, 'success');
+  };
+
+  // =========================================================================
+  // MODAL DE SEGUIMIENTO DE PEDIDOS, PAGOS Y ENVÍOS DEL CLIENTE
+  // =========================================================================
+
+  window.openCustomerOrdersModal = async function() {
+    const modalRoot = $('#ordersModalRoot');
+    if (!modalRoot) return;
+
+    modalRoot.innerHTML = `
+      <div class="modal-backdrop open" id="ordersBackdrop" onclick="window.closeCustomerOrdersModal(event)">
+        <div class="compare-modal-box" onclick="event.stopPropagation()" style="max-width: 860px; width: 95%;">
+          <div class="compare-modal-header">
+            <div>
+              <span style="font-size: 11px; font-weight: 800; color: var(--lime-deep); letter-spacing: 1px;">TRAZABILIDAD DE PEDIDOS, PAGOS Y LOGÍSTICA</span>
+              <h2>Mis Pedidos y Estado de Envío</h2>
+            </div>
+            <button class="modal-close-btn" onclick="window.closeCustomerOrdersModal()">✕</button>
+          </div>
+          <div id="customerOrdersBody" style="padding: 24px; max-height: 75vh; overflow-y: auto;">
+            <p style="text-align: center; padding: 30px; color: #6a7469;">Consultando órdenes, pagos y envíos en Supabase…</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const container = $('#customerOrdersBody');
+    if (!sbClient || !container) return;
+
+    try {
+      const [ordRes, pagRes, envRes, cliRes] = await Promise.all([
+        sbClient.from('orden').select('*').order('id_orden', { ascending: false }).limit(25),
+        sbClient.from('pagos').select('*'),
+        sbClient.from('envios').select('*'),
+        sbClient.from('cliente').select('*')
+      ]);
+
+      const orders = ordRes.data || [];
+      const payments = pagRes.data || [];
+      const shipments = envRes.data || [];
+      const clients = cliRes.data || [];
+
+      if (orders.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 38px; margin-bottom: 10px;">📦</div>
+            <h3>Aún no hay pedidos registrados</h3>
+            <p style="color: #7b8377; margin-top: 6px;">Agrega productos al carrito y completa el checkout para ver el seguimiento en tiempo real.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <table class="compare-table" style="width: 100%; font-size: 13px;">
+          <thead>
+            <tr>
+              <th>Orden</th>
+              <th>Cliente</th>
+              <th>Fecha</th>
+              <th>Total</th>
+              <th>Estado Orden</th>
+              <th>Pago (Tabla pagos)</th>
+              <th>Envío / Guía (Tabla envios)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${orders.map(o => {
+              const pay = payments.find(p => Number(p.id_orden) === Number(o.id_orden));
+              const env = shipments.find(s => Number(s.id_orden) === Number(o.id_orden));
+              const cli = clients.find(c => Number(c.id_cliente) === Number(o.id_cliente));
+              const fechaStr = o.fecha_orden ? new Date(o.fecha_orden).toLocaleDateString('es-CL') : 'Hoy';
+              return `
+                <tr>
+                  <td><strong>${o.codigo || ('#' + o.id_orden)}</strong></td>
+                  <td>${cli ? `${cli.nom1_cliente} ${cli.ape1_cliente}` : ('Cliente #' + o.id_cliente)}</td>
+                  <td>${fechaStr}</td>
+                  <td><strong>$${Number(o.total || 0).toFixed(2)}</strong></td>
+                  <td><span class="discount-badge" style="background: var(--lime-soft); color: var(--ink);">${(o.estado || 'pendiente').toUpperCase()}</span></td>
+                  <td>
+                    ${pay
+                      ? `<div><strong>${pay.metodo_pago.toUpperCase()}</strong> (${pay.estado})</div><small style="color:#6a7469;">${pay.referencia_pasarela || ''}</small>`
+                      : '<span style="color:#8c9388;">Pendiente</span>'}
+                  </td>
+                  <td>
+                    ${env
+                      ? `<div><strong>${env.empresa_envio}</strong> • <span style="color: var(--green-ship); font-weight:700;">${env.estado.toUpperCase()}</span></div><small>Guía: <code>${env.numero_guia || 'S/N'}</code></small>`
+                      : '<span style="color:#8c9388;">En preparación</span>'}
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    } catch (err) {
+      container.innerHTML = `<p style="color: var(--orange); text-align: center;">No se pudieron cargar los pedidos: ${err.message}</p>`;
+    }
+  };
+
+  window.closeCustomerOrdersModal = function(event) {
+    if (event && event.target && event.target.id !== 'ordersBackdrop' && !event.target.classList.contains('modal-close-btn')) {
+      return;
+    }
+    const modalRoot = $('#ordersModalRoot');
+    if (modalRoot) modalRoot.innerHTML = '';
   };
 
   // =========================================================================

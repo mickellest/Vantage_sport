@@ -74,10 +74,16 @@
       <!-- Acciones de Usuario Superior -->
       <div class="header-actions">
         <!-- Switcher a Modo Admin Studio -->
-        <a href="index.html" class="admin-switch-btn" title="Ir al Panel de Marketing y Gestión de Base de Datos">
+        <a href="index.html" id="adminSwitchBtn" class="admin-switch-btn" onclick="return window.handleAdminPanelAccess(event)" title="Ir al Panel de Marketing y Gestión de Base de Datos">
           <span>⚡</span>
           <span>Panel Admin</span>
         </a>
+
+        <!-- Mis Pedidos / Seguimiento de Envíos -->
+        <button class="header-action-btn" onclick="window.openCustomerOrdersModal()" title="Consultar mis pedidos, pagos y estado de envío">
+          <span>📦</span>
+          <span>Mis Pedidos</span>
+        </button>
 
         <!-- Comparador Contador -->
         <button class="header-action-btn" onclick="window.openCompareModal()" title="Ver productos en comparación">
@@ -334,6 +340,12 @@
   <!-- Modal de Inicio de Sesión / Auth ("Inicia sesión para preguntar") -->
   <div id="authModalRoot"></div>
 
+  <!-- Modal de Checkout / Proceso de Compra BPMN (Dirección, Promociones, Pago y Envío) -->
+  <div id="checkoutModalRoot"></div>
+
+  <!-- Modal de Mis Pedidos y Seguimiento de Envíos -->
+  <div id="ordersModalRoot"></div>
+
   <!-- Drawer Lateral del Carrito de Compras -->
   <div class="cart-drawer-overlay" id="cartDrawerOverlay" onclick="window.closeCartDrawer(event)">
     <div class="cart-drawer" onclick="event.stopPropagation()">
@@ -402,9 +414,9 @@
       <div class="footer-col">
         <h4>Administración</h4>
         <ul>
-          <li><a href="index.html" style="color: var(--lime); font-weight: 700;">⚡ Panel de Marketing Studio</a></li>
-          <li><a href="index.html">Gestión de Campañas y Clientes</a></li>
-          <li><a href="index.html">Control de Catálogo y Base de Datos</a></li>
+          <li><a href="index.html" onclick="return window.handleAdminPanelAccess(event)" style="color: var(--lime); font-weight: 700;">⚡ Panel de Marketing Studio</a></li>
+          <li><a href="index.html" onclick="return window.handleAdminPanelAccess(event)">Gestión de Campañas y Clientes</a></li>
+          <li><a href="index.html" onclick="return window.handleAdminPanelAccess(event)">Control de Catálogo y Base de Datos</a></li>
         </ul>
       </div>
     </div>

@@ -49,6 +49,54 @@
       breadcrumb: 'OFFERS / EXCLUSIVE DROPS',
       viewLabel: 'PROMOTIONS DATABASE',
       description: 'Administra los descuentos y ofertas exclusivas pensadas para activar a la comunidad Vantage.'
+    },
+    categorias: {
+      candidates: ['categoria', 'categorias', 'Categoria', 'Categorias'],
+      title: 'Gestión de Categorías',
+      accent: 'categories.',
+      breadcrumb: 'CATALOG STRUCTURE',
+      viewLabel: 'CATEGORY DATABASE',
+      description: 'Administra las líneas deportivas y clasificaciones principales del catálogo.'
+    },
+    variantes: {
+      candidates: ['variantes_producto', 'Variantes_producto', 'variantes'],
+      title: 'Variantes e Inventario (Tallas/Stock)',
+      accent: 'inventory.',
+      breadcrumb: 'STOCK & SKU CONTROL',
+      viewLabel: 'VARIANTS & STOCK DATABASE',
+      description: 'Controla el stock actual, stock mínimo, tallas, colores y códigos SKU de cada prenda.'
+    },
+    orden_detalle: {
+      candidates: ['orden_detalle', 'detalle_pedido', 'Orden_detalle'],
+      title: 'Detalle de Pedidos (Líneas de Venta)',
+      accent: 'order lines.',
+      breadcrumb: 'ORDER ITEMS DETAIL',
+      viewLabel: 'ORDER DETAIL DATABASE',
+      description: 'Revisa los productos, variantes, cantidades y precios históricos de cada orden.'
+    },
+    pagos: {
+      candidates: ['pagos', 'Pagos', 'pago', 'Pago'],
+      title: 'Gestión de Pagos y Transacciones',
+      accent: 'payments.',
+      breadcrumb: 'PAYMENT GATEWAY & TREASURY',
+      viewLabel: 'PAYMENTS DATABASE',
+      description: 'Verifica las referencias de pasarela, métodos de pago y estados de cobro de cada orden.'
+    },
+    proveedores: {
+      candidates: ['proveedores', 'Proveedores', 'proveedor'],
+      title: 'Gestión de Proveedores',
+      accent: 'suppliers.',
+      breadcrumb: 'SUPPLY CHAIN PARTNERS',
+      viewLabel: 'SUPPLIERS DATABASE',
+      description: 'Administra las empresas proveedoras de textiles técnicos e insumos deportivos.'
+    },
+    suministros: {
+      candidates: ['ordenes_suministro', 'Ordenes_suministro', 'suministros'],
+      title: 'Órdenes de Suministro (Reabastecimiento)',
+      accent: 'supply orders.',
+      breadcrumb: 'RESTOCK & PROCUREMENT',
+      viewLabel: 'SUPPLY ORDERS DATABASE',
+      description: 'Gestiona los pedidos de reposición de inventario a proveedores.'
     }
   };
 
@@ -205,6 +253,9 @@
   }
 
   function setupShellEvents() {
+    // Sincronizar usuario activo si inició sesión como admin
+    syncAdminHeaderUser();
+
     const refreshButton = $('#refreshTableButton');
     if (refreshButton) {
       refreshButton.addEventListener('click', async () => {
@@ -247,6 +298,26 @@
       }
       if (event.key === 'Escape') closeModal();
     });
+  }
+
+  function syncAdminHeaderUser() {
+    try {
+      const savedUser = JSON.parse(localStorage.getItem('vantage_store_user') || 'null');
+      if (savedUser) {
+        const nameNode = $('#sidebarUserName');
+        const roleNode = $('#sidebarUserRole');
+        const avatarNode = $('#sidebarUserAvatar');
+        const topbarAvatar = $('#topbarUserAvatar');
+
+        if (nameNode) nameNode.textContent = savedUser.name || 'Admin Vantage';
+        if (roleNode) roleNode.textContent = `Rol: ${(savedUser.rol || 'Administrador').toUpperCase()} • Conectado`;
+        if (avatarNode) avatarNode.textContent = savedUser.avatar || 'AD';
+        if (topbarAvatar) {
+          topbarAvatar.textContent = savedUser.avatar || 'AD';
+          topbarAvatar.title = `${savedUser.name} (Rol: ${savedUser.rol || 'Administrador'})`;
+        }
+      }
+    } catch (e) {}
   }
 
   function updateDate() {
