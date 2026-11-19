@@ -24,416 +24,510 @@
 
   // Catálogo Deportivo Oficial de Vantage Sport (Prendas de Alto Rendimiento)
   const DEFAULT_SPORTS_PRODUCTS = [
-    {
-      id: 'V001',
-      title: 'Camiseta Técnica Vantage Pro Matchday Dri-FIT',
-      category: 'Fútbol',
-      sport: 'Fútbol',
-      price: 49.99,
-      originalPrice: 79.99,
-      discount: 37,
-      rating: 4.9,
-      reviewsCount: 342,
-      soldCount: 1250,
-      image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
-      images: [
-        'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=800&auto=format&fit=crop&q=80'
-      ],
-      badge: 'deal',
-      badgeText: 'OFERTA RELÁMPAGO',
-      isFull: true,
-      freeShipping: true,
-      stock: 24,
-      sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-      colors: ['#101411', '#d4ff3f', '#ffffff'],
-      material: '100% Poliéster Reciclado AeroWeave',
-      technology: 'Vantage Dry-Ventilated (Expulsa el sudor en 30s)',
-      description: 'Diseñada para el fútbol de alta exigencia. Microfibras ventiladas en axilas y espalda que reducen el peso y mantienen el cuerpo fresco en situaciones de máxima pulsación.',
-      questions: [
-        {
-          q: '¿La horma es ajustada o estándar?',
-          a: '¡Hola! Es un corte atlético semi-ajustado. Si prefieres un calce más holgado para entrenar con comodidad, te recomendamos pedir una talla más.',
-          date: 'Hace 2 días'
-        },
-        {
-          q: '¿Viene con el parche oficial de Vantage en la manga?',
-          a: '¡Hola! Sí, incluye el sello termosellado en relieve "Vantage Athletic Dept.®" en la manga izquierda y cuello reforzado.',
-          date: 'Hace 5 días'
-        }
-      ]
-    },
-    {
-      id: 'V002',
-      title: 'Hoodie Térmico Vantage Performance Fleece con Capucha Tech',
-      category: 'Abrigo',
-      sport: 'Training',
-      price: 68.50,
-      originalPrice: 95.00,
-      discount: 28,
-      rating: 4.8,
-      reviewsCount: 215,
-      soldCount: 890,
-      image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=800&auto=format&fit=crop&q=80',
-      images: [
-        'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=800&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=800&auto=format&fit=crop&q=80'
-      ],
-      badge: 'drop',
-      badgeText: 'DROP EXCLUSIVO',
-      isFull: true,
-      freeShipping: true,
-      stock: 15,
-      sizes: ['M', 'L', 'XL'],
-      colors: ['#232a25', '#101411', '#d4ff3f'],
-      material: '80% Algodón Peinado Orgánico, 20% Poliéster Tech',
-      technology: 'Thermal Shield Pro (Aislamiento ligero sin abultar)',
-      description: 'El polerón definitivo para antes y después del partido. Bolsillo tipo canguro sellado y capucha ergonómica con cordones reflectantes de seguridad.',
-      questions: [
-        {
-          q: '¿Encoge al lavarlo en lavadora?',
-          a: '¡Hola! No, la tela viene pre-encogida de fábrica. Te recomendamos lavar con agua fría y no usar secadora a altas temperaturas.',
-          date: 'Hace 1 día'
-        }
-      ]
-    },
-    {
-      id: 'V003',
-      title: 'Zapatillas de Running Vantage Nitro Speed Max Pro',
-      category: 'Calzado',
-      sport: 'Running',
-      price: 119.90,
-      originalPrice: 169.90,
-      discount: 30,
-      rating: 4.95,
-      reviewsCount: 520,
-      soldCount: 2100,
-      image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80',
-      images: [
-        'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800&auto=format&fit=crop&q=80'
-      ],
-      badge: 'deal',
-      badgeText: 'MÁS VENDIDO ⚡',
-      isFull: true,
-      freeShipping: true,
-      stock: 8,
-      sizes: ['39', '40', '41', '42', '43', '44'],
-      colors: ['#fc6536', '#101411', '#ffffff'],
-      material: 'Malla Jacquard Transpirable + Placa de Carbono',
-      technology: 'Nitro Energy Foam (Retorno del 84% de energía)',
-      description: 'Diseñadas para maratonistas y corredores exigentes. Suela de espuma nitrogenada ultra ligera con placa propulsora para pulverizar tus mejores tiempos.',
-      questions: [
-        {
-          q: '¿Sirven para pisada pronadora o neutra?',
-          a: '¡Hola! Tienen soporte para pisada neutra y leve pronación gracias a su chasis estabilizador en el talón.',
-          date: 'Hace 3 días'
-        },
-        {
-          q: '¿Tienen stock en talla 42 en despacho FULL?',
-          a: '¡Hola! Sí, nos quedan 4 pares en almacén FULL con entrega al día siguiente garantizada.',
-          date: 'Ayer'
-        }
-      ]
-    },
-    {
-      id: 'V004',
-      title: 'Shorts de Compresión Vantage Pro Combat con Bolsillo Teléfono',
-      category: 'Shorts',
-      sport: 'Training',
-      price: 32.00,
-      originalPrice: 48.00,
-      discount: 33,
-      rating: 4.7,
-      reviewsCount: 168,
-      soldCount: 940,
-      image: 'https://images.unsplash.com/photo-1506636574312-32087423a636?w=800&auto=format&fit=crop&q=80',
-      images: [
-        'https://images.unsplash.com/photo-1506636574312-32087423a636?w=800&auto=format&fit=crop&q=80'
-      ],
-      badge: 'full',
-      badgeText: 'ENVÍO FULL',
-      isFull: true,
-      freeShipping: false,
-      stock: 35,
-      sizes: ['S', 'M', 'L', 'XL'],
-      colors: ['#101411', '#5c655d'],
-      material: '85% Poliamida, 15% Spandex 4-Way Stretch',
-      technology: 'Muscle-Support Graduated Compression',
-      description: 'Soporte muscular graduado que reduce la vibración en cuádriceps e isquiotibiales durante sprints y sentadillas pesadas. Incluye bolsillo interno seguro antideslizante para móvil.',
-      questions: [
-        {
-          q: '¿El bolsillo aguanta un iPhone grande sin rebotar?',
-          a: '¡Hola! Sí, está ubicado en el lateral del muslo con tensión justa para que no se mueva al correr.',
-          date: 'Hace 6 días'
-        }
-      ]
-    },
-    {
-      id: 'V005',
-      title: 'Jersey Oficial Vantage Retro 90s Street Edition',
-      category: 'Fútbol',
-      sport: 'Fútbol',
-      price: 54.00,
-      originalPrice: 75.00,
-      discount: 28,
-      rating: 4.9,
-      reviewsCount: 194,
-      soldCount: 620,
-      image: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=800&auto=format&fit=crop&q=80',
-      images: [
-        'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=800&auto=format&fit=crop&q=80'
-      ],
-      badge: 'drop',
-      badgeText: 'EDICIÓN ESPECIAL',
-      isFull: true,
-      freeShipping: true,
-      stock: 12,
-      sizes: ['S', 'M', 'L', 'XL'],
-      colors: ['#191e1b', '#d4ff3f'],
-      material: 'Poliéster Heavy Mesh Vintage',
-      technology: 'Retro-Comfort Finish con cuello polo elástico',
-      description: 'Homenaje a la época dorada de las camisetas de fútbol noventeras con el toque vanguardista de Vantage Athletic. Gráficos geométricos sublimados indelebles.',
-      questions: [
-        {
-          q: '¿Se le puede estampar número y nombre?',
-          a: '¡Hola! Por ahora se envían en su versión oficial limpia de catálogo sin dorsal personalizado.',
-          date: 'Hace 4 días'
-        }
-      ]
-    },
-    {
-      id: 'V006',
-      title: 'Leggings de Alto Rendimiento Vantage High-Waist Seamless',
-      category: 'Pantalones',
-      sport: 'Fitness',
-      price: 44.90,
-      originalPrice: 65.00,
-      discount: 31,
-      rating: 4.85,
-      reviewsCount: 280,
-      soldCount: 1400,
-      image: 'https://images.unsplash.com/photo-1506152983158-b4a74a01c721?w=800&auto=format&fit=crop&q=80',
-      images: [
-        'https://images.unsplash.com/photo-1506152983158-b4a74a01c721?w=800&auto=format&fit=crop&q=80'
-      ],
-      badge: 'deal',
-      badgeText: 'OFERTA DESTACADA',
-      isFull: true,
-      freeShipping: true,
-      stock: 19,
-      sizes: ['XS', 'S', 'M', 'L'],
-      colors: ['#101411', '#343a32', '#fc6536'],
-      material: 'Nylon Seamless Ultra Suave + Elastano',
-      technology: 'Squat-Proof 100% No Transparente',
-      description: 'Cintura alta compresiva que moldea y no se enrolla. Tejido sin costuras que evita rozaduras durante sesiones de Crossfit, yoga o running de larga distancia.',
-      questions: [
-        {
-          q: '¿Es 100% a prueba de sentadillas (squat proof)?',
-          a: '¡Totalmente garantizado! Probado en laboratorio textil: no transparenta incluso en máxima elongación.',
-          date: 'Hace 1 semana'
-        }
-      ]
-    },
-    {
-      id: 'V007',
-      title: 'Chaqueta Cortavientos Ultralight Vantage Aero Shield',
-      category: 'Abrigo',
-      sport: 'Running',
-      price: 74.99,
-      originalPrice: 110.00,
-      discount: 32,
-      rating: 4.75,
-      reviewsCount: 98,
-      soldCount: 430,
-      image: 'https://images.unsplash.com/photo-1544441893-675973e31985?w=800&auto=format&fit=crop&q=80',
-      images: [
-        'https://images.unsplash.com/photo-1544441893-675973e31985?w=800&auto=format&fit=crop&q=80'
-      ],
-      badge: 'full',
-      badgeText: 'ENVÍO FULL',
-      isFull: true,
-      freeShipping: true,
-      stock: 10,
-      sizes: ['S', 'M', 'L', 'XL'],
-      colors: ['#d4ff3f', '#191e1b'],
-      material: 'Ripstop 20D Repelente al Agua (DWR)',
-      technology: 'Packable Tech (Se empaca en su propio bolsillo)',
-      description: 'Pesa menos de 140 gramos. Protección total contra viento y llovizna con bandas reflectivas 360° para entrenar de noche con máxima visibilidad.',
-      questions: [
-        {
-          q: '¿Resiste lluvia fuerte o solo llovizna?',
-          a: '¡Hola! Es cortavientos con tratamiento DWR repelente para lloviznas y lluvia ligera/moderada.',
-          date: 'Hace 3 días'
-        }
-      ]
-    },
-    {
-      id: 'V008',
-      title: 'Balón Oficial de Fútbol Vantage Match Ball FIFA Quality Pro',
-      category: 'Accesorios',
-      sport: 'Fútbol',
-      price: 39.99,
-      originalPrice: 59.99,
-      discount: 33,
-      rating: 4.9,
-      reviewsCount: 410,
-      soldCount: 1800,
-      image: 'https://images.unsplash.com/photo-1614632537423-1e6c2e7e0aab?w=800&auto=format&fit=crop&q=80',
-      images: [
-        'https://images.unsplash.com/photo-1614632537423-1e6c2e7e0aab?w=800&auto=format&fit=crop&q=80'
-      ],
-      badge: 'deal',
-      badgeText: 'MÁS VENDIDO ⚡',
-      isFull: true,
-      freeShipping: true,
-      stock: 45,
-      sizes: ['Talla 5 Oficial'],
-      colors: ['#ffffff'],
-      material: 'PU Texturizado Termosellado sin costuras',
-      technology: 'Aero-Groove Aerodinámica Estable',
-      description: 'Balón oficial de competición con absorción de agua nula y trayectoria precisa en tiros libres y cambios de frente. Cámara de butilo de alta retención de aire.',
-      questions: [
-        {
-          q: '¿Viene inflado o desinflado?',
-          a: '¡Hola! Se despacha inflado a presión óptima en caja de protección individual.',
-          date: 'Hace 2 días'
-        }
-      ]
-    },
-    {
-      id: 'V009',
-      title: 'Top Deportivo Sujeción Máxima Vantage Core Impact Racerback',
-      category: 'Tops',
-      sport: 'Fitness',
-      price: 29.50,
-      originalPrice: 42.00,
-      discount: 30,
-      rating: 4.88,
-      reviewsCount: 175,
-      soldCount: 810,
-      image: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&auto=format&fit=crop&q=80',
-      images: [
-        'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&auto=format&fit=crop&q=80'
-      ],
-      badge: 'full',
-      badgeText: 'ENVÍO FULL',
-      isFull: true,
-      freeShipping: false,
-      stock: 22,
-      sizes: ['XS', 'S', 'M', 'L'],
-      colors: ['#101411', '#fc6536', '#d4ff3f'],
-      material: 'Poliéster Reciclado & Elastano de Doble Densidad',
-      technology: 'Anti-Bounce Support System',
-      description: 'Sujeción de alto impacto para running, HIIT y deportes de contacto. Almohadillas extraíbles transpirables y espalda deportiva que libera los omóplatos.',
-      questions: [
-        {
-          q: '¿Sirve para copa D en deportes de salto?',
-          a: '¡Hola! Sí, la banda elástica inferior de 4cm y los tirantes anchos ofrecen soporte de grado profesional para copas C y D.',
-          date: 'Hace 5 días'
-        }
-      ]
-    },
-    {
-      id: 'V010',
-      title: 'Mochila Técnica Deportiva Vantage Gym & Match 35L',
-      category: 'Accesorios',
-      sport: 'Training',
-      price: 49.00,
-      originalPrice: 70.00,
-      discount: 30,
-      rating: 4.8,
-      reviewsCount: 130,
-      soldCount: 520,
-      image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
-      images: [
-        'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80'
-      ],
-      badge: 'deal',
-      badgeText: 'RECOMENDADO',
-      isFull: true,
-      freeShipping: true,
-      stock: 14,
-      sizes: ['35 Litros'],
-      colors: ['#101411'],
-      material: 'Cordura Balística 600D Impermeable',
-      technology: 'Shoe Compartment Ventilated + Laptop Sleeve 16"',
-      description: 'Compartimento inferior aislado para zapatillas con ventilación metálica, bolsillo húmedo para ropa sudada y funda acolchada para laptop.',
-      questions: [
-        {
-          q: '¿Caben zapatillas de caña alta talla 44?',
-          a: '¡Hola! Sí, el compartimento inferior está dimensionado para calzado hasta talla 46 europea.',
-          date: 'Hace 4 días'
-        }
-      ]
-    },
-    {
-      id: 'V011',
-      title: 'Pantalón Jogger Técnico Vantage Street Athlete Pro',
-      category: 'Pantalones',
-      sport: 'Lifestyle',
-      price: 52.50,
-      originalPrice: 75.00,
-      discount: 30,
-      rating: 4.78,
-      reviewsCount: 112,
-      soldCount: 490,
-      image: 'https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=800&auto=format&fit=crop&q=80',
-      images: [
-        'https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=800&auto=format&fit=crop&q=80'
-      ],
-      badge: 'drop',
-      badgeText: 'STREET WEAR',
-      isFull: true,
-      freeShipping: true,
-      stock: 16,
-      sizes: ['S', 'M', 'L', 'XL'],
-      colors: ['#191e1b', '#343a32'],
-      material: 'Tech Terry de Peso Medio con Elastano',
-      technology: 'Tapered Ankle Zippers (Cremalleras en tobillo)',
-      description: 'Corte cónico moderno con cremalleras invisibles en los tobillos para ponerte o quitarte el pantalón sin necesidad de sacarte las zapatillas de fútbol.',
-      questions: [
-        {
-          q: '¿Los bolsillos tienen cremallera?',
-          a: '¡Hola! Sí, ambos bolsillos laterales cuentan con cremalleras YKK selladas al calor.',
-          date: 'Hace 3 días'
-        }
-      ]
-    },
-    {
-      id: 'V012',
-      title: 'Gorra Técnica de Competición Vantage Laser AirFlow',
-      category: 'Accesorios',
-      sport: 'Running',
-      price: 22.00,
-      originalPrice: 32.00,
-      discount: 31,
-      rating: 4.85,
-      reviewsCount: 160,
-      soldCount: 780,
-      image: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=800&auto=format&fit=crop&q=80',
-      images: [
-        'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=800&auto=format&fit=crop&q=80'
-      ],
-      badge: 'full',
-      badgeText: 'ENVÍO FULL',
-      isFull: true,
-      freeShipping: false,
-      stock: 40,
-      sizes: ['Talla Única Ajustable'],
-      colors: ['#101411', '#ffffff', '#d4ff3f'],
-      material: 'Microfibra Perforada por Láser UPF 50+',
-      technology: 'Quick-Dry Sweatband & Anti-Glare Visor',
-      description: 'Microperforaciones laterales para disipar el calor en días soleados de carrera. Visera inferior negra que absorbe el reflejo de la luz solar.',
-      questions: [
-        {
-          q: '¿Se lava a máquina?',
-          a: '¡Hola! Recomendamos lavado a mano con agua fría para mantener la curvatura de la visera intacta.',
-          date: 'Hace 1 semana'
-        }
-      ]
-    }
-  ];
+  {
+    "id": "V001",
+    "title": "Camiseta Técnica Vantage Pro Matchday Dri-FIT",
+    "category": "Fútbol",
+    "sport": "Fútbol",
+    "price": 49.99,
+    "originalPrice": 79.99,
+    "discount": 37,
+    "rating": 4.9,
+    "reviewsCount": 9,
+    "soldCount": 68,
+    "image": "https://i.ibb.co/KxjF1Lzf/Retrato-deportivo-con-acentos-ne-n.png",
+    "images": [
+      "https://i.ibb.co/KxjF1Lzf/Retrato-deportivo-con-acentos-ne-n.png"
+    ],
+    "badge": "deal",
+    "badgeText": "OFERTA RELÁMPAGO",
+    "isFull": true,
+    "freeShipping": true,
+    "stock": 24,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "colors": [
+      "#101411",
+      "#d4ff3f",
+      "#ffffff"
+    ],
+    "material": "100% Poliéster Reciclado AeroWeave",
+    "technology": "Vantage Dry-Ventilated (Expulsa el sudor en 30s)",
+    "description": "Camiseta de fútbol de corte atlético semi-ajustado, confeccionada en poliéster reciclado AeroWeave. Sus zonas de microfibra ventilada en axilas y espalda favorecen la circulación del aire durante entrenamientos y partidos. Incorpora cuello reforzado y sello termosellado Vantage en la manga izquierda. Una opción ligera para quienes buscan comodidad y libertad de movimiento dentro y fuera del campo.",
+    "questions": [
+      {
+        "q": "¿El corte es ajustado o estándar?",
+        "a": "¡Hola! Tiene un corte atlético semi-ajustado. Si prefieres llevarla más holgada, te recomendamos revisar la guía de tallas y considerar una talla más.",
+        "date": "Hace 8 días"
+      },
+      {
+        "q": "¿El sello Vantage viene incluido?",
+        "a": "¡Hola! Sí, la camiseta incluye el sello termosellado Vantage en relieve en la manga izquierda.",
+        "date": "Hace 17 días"
+      }
+    ]
+  },
+  {
+    "id": "V002",
+    "title": "Hoodie Térmico Vantage Performance Fleece con Capucha Tech",
+    "category": "Abrigo",
+    "sport": "Training",
+    "price": 68.5,
+    "originalPrice": 95.0,
+    "discount": 28,
+    "rating": 4.8,
+    "reviewsCount": 6,
+    "soldCount": 43,
+    "image": "https://i.ibb.co/GQ06rrjv/Retrato-urbano-con-logo-verde-ne-n.png",
+    "images": [
+      "https://i.ibb.co/GQ06rrjv/Retrato-urbano-con-logo-verde-ne-n.png"
+    ],
+    "badge": "drop",
+    "badgeText": "DROP EXCLUSIVO",
+    "isFull": true,
+    "freeShipping": true,
+    "stock": 15,
+    "sizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "#232a25",
+      "#101411",
+      "#d4ff3f"
+    ],
+    "material": "80% Algodón Peinado Orgánico, 20% Poliéster Tech",
+    "technology": "Thermal Shield Pro (Aislamiento ligero sin abultar)",
+    "description": "Hoodie deportivo de fleece suave y abrigo ligero, pensado para los momentos previos y posteriores al entrenamiento. Su capucha ergonómica, cordones reflectantes y bolsillo canguro sellado combinan comodidad con detalles funcionales. El tejido pre-encogido ayuda a conservar la forma de la prenda siguiendo las instrucciones de cuidado.",
+    "questions": [
+      {
+        "q": "¿La tela encoge al lavarla?",
+        "a": "¡Hola! La tela viene pre-encogida. Para conservar mejor la forma y el acabado, recomendamos lavar con agua fría y evitar temperaturas altas en la secadora.",
+        "date": "Hace 6 días"
+      }
+    ]
+  },
+  {
+    "id": "V003",
+    "title": "Zapatillas de Running Vantage Nitro Speed Max Pro",
+    "category": "Calzado",
+    "sport": "Running",
+    "price": 119.9,
+    "originalPrice": 169.9,
+    "discount": 30,
+    "rating": 4.95,
+    "reviewsCount": 11,
+    "soldCount": 76,
+    "image": "https://i.ibb.co/BKNCrZF6/Zapatillas-Vantage-al-atardecer-1.png",
+    "images": [
+      "https://i.ibb.co/BKNCrZF6/Zapatillas-Vantage-al-atardecer-1.png",
+      "https://i.ibb.co/8n0xj9Pc/Zapatillas-NITRO-SPEED-al-Amanecer-2.png"
+    ],
+    "badge": "deal",
+    "badgeText": "MÁS VENDIDO ⚡",
+    "isFull": true,
+    "freeShipping": true,
+    "stock": 8,
+    "sizes": [
+      "39",
+      "40",
+      "41",
+      "42",
+      "43",
+      "44"
+    ],
+    "colors": [
+      "#fc6536",
+      "#101411",
+      "#ffffff"
+    ],
+    "material": "Malla Jacquard Transpirable + Placa de Carbono",
+    "technology": "Nitro Energy Foam (Retorno del 84% de energía)",
+    "description": "Zapatillas de running diseñadas para entrenamientos dinámicos y corredores que buscan una pisada ligera y reactiva. La parte superior de malla Jacquard favorece la transpirabilidad, mientras que la mediasuela Nitro Energy Foam y la placa propulsora aportan sensación de impulso. El chasis estabilizador del talón está pensado para pisada neutra y ligera pronación.",
+    "questions": [
+      {
+        "q": "¿Para qué tipo de pisada están recomendadas?",
+        "a": "¡Hola! Están orientadas a pisada neutra y pueden ofrecer soporte para una pronación leve gracias al chasis estabilizador del talón. Si necesitas corrección específica, conviene consultar a un especialista en running.",
+        "date": "Hace 9 días"
+      },
+      {
+        "q": "¿Cómo puedo confirmar mi talla?",
+        "a": "¡Hola! Te recomendamos comparar la medida de tu pie en centímetros con la guía de tallas antes de realizar el pedido.",
+        "date": "Hace 21 días"
+      }
+    ]
+  },
+  {
+    "id": "V004",
+    "title": "Shorts de Compresión Vantage Pro Combat con Bolsillo Teléfono",
+    "category": "Shorts",
+    "sport": "Training",
+    "price": 32.0,
+    "originalPrice": 48.0,
+    "discount": 33,
+    "rating": 4.7,
+    "reviewsCount": 7,
+    "soldCount": 52,
+    "image": "https://i.ibb.co/C5dY21vH/Estiramiento-en-el-gimnasio-Vantage.png",
+    "images": [
+      "https://i.ibb.co/C5dY21vH/Estiramiento-en-el-gimnasio-Vantage.png"
+    ],
+    "badge": "full",
+    "badgeText": "ENVÍO FULL",
+    "isFull": true,
+    "freeShipping": false,
+    "stock": 35,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "#101411",
+      "#5c655d"
+    ],
+    "material": "85% Poliamida, 15% Spandex 4-Way Stretch",
+    "technology": "Muscle-Support Graduated Compression",
+    "description": "Shorts de compresión confeccionados en tejido elástico 4-Way Stretch, diseñados para acompañar movimientos amplios durante fuerza, sprints y sesiones de entrenamiento. La compresión graduada ofrece soporte durante la actividad y el bolsillo interno lateral permite llevar un teléfono sujeto al muslo con menos movimiento.",
+    "questions": [
+      {
+        "q": "¿El bolsillo permite llevar un teléfono grande?",
+        "a": "¡Hola! El bolsillo está ubicado en el lateral del muslo y tiene un ajuste elástico para mantener el teléfono sujeto durante el movimiento. Te recomendamos comprobar las dimensiones de tu dispositivo.",
+        "date": "Hace 12 días"
+      }
+    ]
+  },
+  {
+    "id": "V005",
+    "title": "Jersey Oficial Vantage Retro 90s Street Edition",
+    "category": "Fútbol",
+    "sport": "Fútbol",
+    "price": 54.0,
+    "originalPrice": 75.0,
+    "discount": 28,
+    "rating": 4.9,
+    "reviewsCount": 5,
+    "soldCount": 34,
+    "image": "https://i.ibb.co/Vpr6kM6d/Retrato-futbol-stico-retro-en-t-nel-ne-n.png",
+    "images": [
+      "https://i.ibb.co/Vpr6kM6d/Retrato-futbol-stico-retro-en-t-nel-ne-n.png"
+    ],
+    "badge": "drop",
+    "badgeText": "EDICIÓN ESPECIAL",
+    "isFull": true,
+    "freeShipping": true,
+    "stock": 12,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "#191e1b",
+      "#d4ff3f"
+    ],
+    "material": "Poliéster Heavy Mesh Vintage",
+    "technology": "Retro-Comfort Finish con cuello polo elástico",
+    "description": "Jersey de fútbol con inspiración visual en las equipaciones de los años noventa. Está confeccionado en tejido Heavy Mesh y presenta cuello polo elástico junto con gráficos geométricos sublimados integrados en la tela. Se entrega en versión limpia de catálogo, sin dorsal ni nombre personalizado, para conservar su estética retro.",
+    "questions": [
+      {
+        "q": "¿Se puede personalizar con número y nombre?",
+        "a": "¡Hola! Por el momento se envía en su versión limpia de catálogo, sin dorsal ni nombre personalizado.",
+        "date": "Hace 11 días"
+      }
+    ]
+  },
+  {
+    "id": "V006",
+    "title": "Leggings de Alto Rendimiento Vantage High-Waist Seamless",
+    "category": "Pantalones",
+    "sport": "Fitness",
+    "price": 44.9,
+    "originalPrice": 65.0,
+    "discount": 31,
+    "rating": 4.85,
+    "reviewsCount": 8,
+    "soldCount": 61,
+    "image": "https://i.ibb.co/p61Np4DK/Maniqu-Deportivo-con-Leggings-Negros-VANTAGE.png",
+    "images": [
+      "https://i.ibb.co/p61Np4DK/Maniqu-Deportivo-con-Leggings-Negros-VANTAGE.png"
+    ],
+    "badge": "deal",
+    "badgeText": "OFERTA DESTACADA",
+    "isFull": true,
+    "freeShipping": true,
+    "stock": 19,
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L"
+    ],
+    "colors": [
+      "#101411",
+      "#343a32",
+      "#fc6536"
+    ],
+    "material": "Nylon Seamless Ultra Suave + Elastano",
+    "technology": "Squat-Proof 100% No Transparente",
+    "description": "Leggings deportivos de cintura alta y construcción seamless, confeccionados en nylon suave con elastano. Su pretina ancha ofrece un ajuste firme sin enrollarse fácilmente y el tejido está pensado para mantener la cobertura durante sentadillas y movimientos de amplitud. Adecuados para sesiones de fitness, yoga y running.",
+    "questions": [
+      {
+        "q": "¿El tejido transparenta al hacer sentadillas?",
+        "a": "¡Hola! El tejido está diseñado para ofrecer buena cobertura durante movimientos de amplitud. Para un resultado óptimo, recomendamos elegir la talla adecuada y evitar una tensión excesiva.",
+        "date": "Hace 7 días"
+      }
+    ]
+  },
+  {
+    "id": "V007",
+    "title": "Chaqueta Cortavientos Ultralight Vantage Aero Shield",
+    "category": "Abrigo",
+    "sport": "Running",
+    "price": 74.99,
+    "originalPrice": 110.0,
+    "discount": 32,
+    "rating": 4.75,
+    "reviewsCount": 4,
+    "soldCount": 29,
+    "image": "https://i.ibb.co/wryWTNKG/Anuncio-deportivo-al-atardecer.png",
+    "images": [
+      "https://i.ibb.co/wryWTNKG/Anuncio-deportivo-al-atardecer.png"
+    ],
+    "badge": "full",
+    "badgeText": "ENVÍO FULL",
+    "isFull": true,
+    "freeShipping": true,
+    "stock": 10,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "#d4ff3f",
+      "#191e1b"
+    ],
+    "material": "Ripstop 20D Repelente al Agua (DWR)",
+    "technology": "Packable Tech (Se empaca en su propio bolsillo)",
+    "description": "Chaqueta cortavientos ultraligera en tejido ripstop 20D con tratamiento repelente al agua DWR. Su diseño compacto ayuda a proteger del viento y de lloviznas o lluvia ligera, mientras que las bandas reflectivas mejoran la visibilidad en condiciones de poca luz. Puede guardarse en su propio bolsillo para transportarla con facilidad.",
+    "questions": [
+      {
+        "q": "¿Sirve para lluvia fuerte?",
+        "a": "¡Hola! Es una chaqueta cortavientos con tratamiento DWR, adecuada para viento y lluvia ligera o llovizna. No está diseñada como impermeable para lluvia intensa o prolongada.",
+        "date": "Hace 15 días"
+      }
+    ]
+  },
+  {
+    "id": "V008",
+    "title": "Balón Oficial de Fútbol Vantage Match Ball FIFA Quality Pro",
+    "category": "Accesorios",
+    "sport": "Fútbol",
+    "price": 39.99,
+    "originalPrice": 59.99,
+    "discount": 33,
+    "rating": 4.9,
+    "reviewsCount": 10,
+    "soldCount": 72,
+    "image": "https://i.ibb.co/vWRyrYd/Bal-n-Vantage-en-c-sped-estadio.png",
+    "images": [
+      "https://i.ibb.co/vWRyrYd/Bal-n-Vantage-en-c-sped-estadio.png"
+    ],
+    "badge": "deal",
+    "badgeText": "MÁS VENDIDO ⚡",
+    "isFull": true,
+    "freeShipping": true,
+    "stock": 45,
+    "sizes": [
+      "Talla 5 Oficial"
+    ],
+    "colors": [
+      "#ffffff"
+    ],
+    "material": "PU Texturizado Termosellado sin costuras",
+    "technology": "Aero-Groove Aerodinámica Estable",
+    "description": "Balón de fútbol talla 5 con superficie de PU texturizado y paneles termosellados. Su construcción está orientada a ofrecer un contacto uniforme y una trayectoria estable durante entrenamientos y partidos. La cámara de butilo ayuda a conservar la presión de aire entre usos; se entrega inflado y protegido en una caja individual.",
+    "questions": [
+      {
+        "q": "¿El balón se entrega inflado?",
+        "a": "¡Hola! Sí, se despacha inflado a la presión recomendada y en una caja de protección individual.",
+        "date": "Hace 5 días"
+      }
+    ]
+  },
+  {
+    "id": "V009",
+    "title": "Top Deportivo Sujeción Máxima Vantage Core Impact Racerback",
+    "category": "Tops",
+    "sport": "Fitness",
+    "price": 29.5,
+    "originalPrice": 42.0,
+    "discount": 30,
+    "rating": 4.88,
+    "reviewsCount": 5,
+    "soldCount": 38,
+    "image": "https://i.ibb.co/TBvXjDQn/Maniqu-deportivo-Vantage-en-negro-y-ne-n.png",
+    "images": [
+      "https://i.ibb.co/TBvXjDQn/Maniqu-deportivo-Vantage-en-negro-y-ne-n.png"
+    ],
+    "badge": "full",
+    "badgeText": "ENVÍO FULL",
+    "isFull": true,
+    "freeShipping": false,
+    "stock": 22,
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L"
+    ],
+    "colors": [
+      "#101411",
+      "#fc6536",
+      "#d4ff3f"
+    ],
+    "material": "Poliéster Reciclado & Elastano de Doble Densidad",
+    "technology": "Anti-Bounce Support System",
+    "description": "Top deportivo de sujeción alta con diseño racerback, tirantes anchos y banda inferior elástica de 4 cm. El tejido de doble densidad combina poliéster reciclado y elastano, y sus almohadillas transpirables son extraíbles. La estructura está pensada para aportar soporte durante running, HIIT y otras actividades de impacto.",
+    "questions": [
+      {
+        "q": "¿Ofrece soporte para entrenamientos con saltos?",
+        "a": "¡Hola! Está diseñado para ofrecer sujeción alta. La banda inferior de 4 cm y los tirantes anchos ayudan a mantener el top en su sitio durante actividades de impacto. El ajuste puede variar según el cuerpo y la talla.",
+        "date": "Hace 10 días"
+      }
+    ]
+  },
+  {
+    "id": "V010",
+    "title": "Mochila Técnica Deportiva Vantage Gym & Match 35L",
+    "category": "Accesorios",
+    "sport": "Training",
+    "price": 49.0,
+    "originalPrice": 70.0,
+    "discount": 30,
+    "rating": 4.8,
+    "reviewsCount": 3,
+    "soldCount": 25,
+    "image": "https://i.ibb.co/dwsF5MMk/Mochila-deportiva-en-vestuario-moderno-4.png",
+    "images": [
+      "https://i.ibb.co/dwsF5MMk/Mochila-deportiva-en-vestuario-moderno-4.png",
+      "https://i.ibb.co/LdzdmhY0/Mochila-Vantage-35-L-en-vestuario-deportivo-1.png"
+    ],
+    "badge": "deal",
+    "badgeText": "RECOMENDADO",
+    "isFull": true,
+    "freeShipping": true,
+    "stock": 14,
+    "sizes": [
+      "35 Litros"
+    ],
+    "colors": [
+      "#101411"
+    ],
+    "material": "Cordura Balística 600D Impermeable",
+    "technology": "Shoe Compartment Ventilated + Laptop Sleeve 16\"",
+    "description": "Mochila deportiva de 35 litros fabricada en Cordura balística 600D. Organiza el equipamiento con un compartimento inferior ventilado para zapatillas, un bolsillo separado para ropa húmeda y una funda acolchada para laptop de hasta 16 pulgadas. Una solución práctica para combinar gimnasio, trabajo y desplazamientos.",
+    "questions": [
+      {
+        "q": "¿Cabe un par de zapatillas de caña alta?",
+        "a": "¡Hola! El compartimento inferior está pensado para guardar calzado deportivo. Para zapatillas voluminosas o de caña alta, recomendamos comprobar sus dimensiones antes de comprar.",
+        "date": "Hace 18 días"
+      }
+    ]
+  },
+  {
+    "id": "V011",
+    "title": "Pantalón Jogger Técnico Vantage Street Athlete Pro",
+    "category": "Pantalones",
+    "sport": "Lifestyle",
+    "price": 52.5,
+    "originalPrice": 75.0,
+    "discount": 30,
+    "rating": 4.78,
+    "reviewsCount": 4,
+    "soldCount": 31,
+    "image": "https://i.ibb.co/N6W1pgW4/Anuncio-deportivo-VANTAGE-en-concreto.png",
+    "images": [
+      "https://i.ibb.co/N6W1pgW4/Anuncio-deportivo-VANTAGE-en-concreto.png",
+      "https://i.ibb.co/Kct2SNBt/Retrato-minimalista-con-atuendo-Vantage.png"
+    ],
+    "badge": "drop",
+    "badgeText": "STREET WEAR",
+    "isFull": true,
+    "freeShipping": true,
+    "stock": 16,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "#191e1b",
+      "#343a32"
+    ],
+    "material": "Tech Terry de Peso Medio con Elastano",
+    "technology": "Tapered Ankle Zippers (Cremalleras en tobillo)",
+    "description": "Jogger técnico de corte cónico en tejido Tech Terry de peso medio con elastano. Ofrece comodidad en la zona del muslo y un ajuste progresivamente más estrecho hacia los tobillos. Incorpora bolsillos laterales con cierre sellado y cremalleras discretas en los tobillos para facilitar el cambio de calzado.",
+    "questions": [
+      {
+        "q": "¿Los bolsillos tienen cierre?",
+        "a": "¡Hola! Sí, los dos bolsillos laterales cuentan con cremalleras selladas.",
+        "date": "Hace 13 días"
+      }
+    ]
+  },
+  {
+    "id": "V012",
+    "title": "Gorra Técnica de Competición Vantage Laser AirFlow",
+    "category": "Accesorios",
+    "sport": "Running",
+    "price": 22.0,
+    "originalPrice": 32.0,
+    "discount": 31,
+    "rating": 4.85,
+    "reviewsCount": 6,
+    "soldCount": 47,
+    "image": "https://i.ibb.co/Lhp4fdRf/Retrato-deportivo-Vantage-en-la-pista.png",
+    "images": [
+      "https://i.ibb.co/Lhp4fdRf/Retrato-deportivo-Vantage-en-la-pista.png"
+    ],
+    "badge": "full",
+    "badgeText": "ENVÍO FULL",
+    "isFull": true,
+    "freeShipping": false,
+    "stock": 40,
+    "sizes": [
+      "Talla Única Ajustable"
+    ],
+    "colors": [
+      "#101411",
+      "#ffffff",
+      "#d4ff3f"
+    ],
+    "material": "Microfibra Perforada por Láser UPF 50+",
+    "technology": "Quick-Dry Sweatband & Anti-Glare Visor",
+    "description": "Gorra técnica ligera de microfibra con perforaciones laterales realizadas por láser para favorecer la ventilación. Incluye banda interior de secado rápido, visera con cara inferior negra antirreflejo y protección UPF 50+. El cierre posterior ajustable permite adaptar el calce para entrenamientos y carreras al aire libre.",
+    "questions": [
+      {
+        "q": "¿Se puede lavar en lavadora?",
+        "a": "¡Hola! Recomendamos lavado a mano con agua fría y secado al aire para ayudar a conservar la forma de la visera y los materiales.",
+        "date": "Hace 4 días"
+      }
+    ]
+  }
+];
+
 
   // Estado global de la aplicación
   const state = {
