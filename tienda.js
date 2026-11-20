@@ -174,9 +174,10 @@
     "rating": 4.7,
     "reviewsCount": 7,
     "soldCount": 52,
-    "image": "https://i.ibb.co/C5dY21vH/Estiramiento-en-el-gimnasio-Vantage.png",
+    "image": "https://i.ibb.co/Z1b1pTJq/imagen-2026-11-19-195539838.png",
     "images": [
-      "https://i.ibb.co/C5dY21vH/Estiramiento-en-el-gimnasio-Vantage.png"
+      "https://i.ibb.co/C5dY21vH/Estiramiento-en-el-gimnasio-Vantage.png",
+      "https://i.ibb.co/Z1b1pTJq/imagen-2026-11-19-195539838.png"
     ],
     "badge": "full",
     "badgeText": "ENVÍO FULL",
