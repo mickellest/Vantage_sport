@@ -731,7 +731,7 @@
             // Buscar plantilla visual por nombre o índice
             const matchedTemplate = DEFAULT_SPORTS_PRODUCTS.find(
               t => removeAccents(t.title) === removeAccents(p.nombre_producto)
-            ) || DEFAULT_SPORTS_PRODUCTS[index % DEFAULT_SPORTS_PRODUCTS.length];
+            ); //|| DEFAULT_SPORTS_PRODUCTS[index % DEFAULT_SPORTS_PRODUCTS.length];
 
             const prodVariants = dbVariants.filter(v => Number(v.id_producto) === Number(p.id_producto));
             const variantSizes = [...new Set(prodVariants.map(v => v.talla).filter(Boolean))];
