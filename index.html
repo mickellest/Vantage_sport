@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#151916">
-  <meta name="description" content="Vantage — panel de marketing deportivo para campañas, clientes, promociones y catálogo.">
+  <meta name="description"
+    content="Vantage — panel de marketing deportivo para campañas, clientes, promociones y catálogo.">
   <title>Vantage — Marketing Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -16,6 +20,7 @@
   <script src="Java.js" defer></script>
   <script src="dashboard.js" defer></script>
 </head>
+
 <body>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
@@ -33,23 +38,21 @@
       </div>
 
       <nav class="nav-groups" aria-label="Navegación principal">
-        <div class="nav-label">DISEÑO DE PUBLICIDAD</div>
-
-        <!-- ── ANALYTICS ─────────────────────────────────── -->
-        <div class="nav-label nav-label-spaced">ANALÍTICA / DASHBOARD</div>
-        <button class="nav-item" data-tab="graf_ventas" onclick="switchTab(event,'graf_ventas')" type="button">
-          <span class="nav-icon" aria-hidden="true">📈</span><span>Ventas</span><span class="nav-tag">LIVE</span>
+        <div class="nav-label">CONTROL ROOM / ANALÍTICA</div>
+        <button class="nav-item" id="tab-btn-ventas" data-tab="graf_ventas" onclick="switchTab(event, 'graf_ventas')" type="button">
+          <span class="nav-icon" aria-hidden="true">📈</span><span>Ventas e Ingresos</span><span class="nav-tag">LIVE</span>
         </button>
-        <button class="nav-item" data-tab="graf_pedidos" onclick="switchTab(event,'graf_pedidos')" type="button">
-          <span class="nav-icon" aria-hidden="true">📦</span><span>Pedidos</span>
+        <button class="nav-item" id="tab-btn-pedidos" data-tab="graf_pedidos" onclick="switchTab(event, 'graf_pedidos')" type="button">
+          <span class="nav-icon" aria-hidden="true">📊</span><span>Estado de Pedidos</span>
         </button>
-        <button class="nav-item" data-tab="graf_compras" onclick="switchTab(event,'graf_compras')" type="button">
+        <button class="nav-item" id="tab-btn-compras" data-tab="graf_compras" onclick="switchTab(event, 'graf_compras')" type="button">
           <span class="nav-icon" aria-hidden="true">🛒</span><span>Compras a Proveedores</span>
         </button>
 
-        <div class="nav-label nav-label-spaced">DISEÑO DE PUBLICIDAD</div>
+        <div class="nav-label nav-label-spaced"> DISEÑO DE PUBLICIDAD</div>
         <button class="nav-item active" data-tab="campana" onclick="switchTab(event, 'campana')" type="button">
-          <span class="nav-icon icon-campaign" aria-hidden="true">↗</span><span>Campañas</span><span class="nav-arrow">↗</span>
+          <span class="nav-icon icon-campaign" aria-hidden="true">↗</span><span>Campañas</span><span
+            class="nav-arrow">↗</span>
         </button>
         <button class="nav-item" data-tab="clientes" onclick="switchTab(event, 'clientes')" type="button">
           <span class="nav-icon" aria-hidden="true">◎</span><span>Clientes</span>
@@ -73,6 +76,12 @@
         <button class="nav-item" data-tab="pedidos" onclick="switchTab(event, 'pedidos')" type="button">
           <span class="nav-icon" aria-hidden="true">▤</span><span>Pedidos (Órdenes)</span>
         </button>
+        <button class="nav-item" data-tab="ventas" onclick="switchTab(event, 'ventas')" type="button">
+          <span class="nav-icon" aria-hidden="true">⇄</span><span>Ventas</span>
+        </button>
+        <button class="nav-item" data-tab="compras" onclick="switchTab(event, 'compras')" type="button">
+          <span class="nav-icon" aria-hidden="true">↙</span><span>Compras</span>
+        </button>
         <button class="nav-item" data-tab="orden_detalle" onclick="switchTab(event, 'orden_detalle')" type="button">
           <span class="nav-icon" aria-hidden="true">≡</span><span>Detalle de Pedidos</span>
         </button>
@@ -93,7 +102,8 @@
 
         <div class="nav-label nav-label-spaced">TIENDA ONLINE</div>
         <a class="nav-item" href="tienda.html" style="text-decoration: none;">
-          <span class="nav-icon" aria-hidden="true">🛍️</span><span>Ver Tienda (Clientes)</span><span class="nav-arrow">↗</span>
+          <span class="nav-icon" aria-hidden="true">🛍️</span><span>Ver Tienda (Clientes)</span><span
+            class="nav-arrow">↗</span>
         </a>
       </nav>
 
@@ -116,9 +126,11 @@
 
     <main class="main-area" id="top">
       <header class="topbar">
-        <button class="mobile-menu-btn" id="mobileMenuButton" type="button" aria-label="Abrir navegación" aria-controls="sidebar" aria-expanded="false"><span></span><span></span><span></span></button>
+        <button class="mobile-menu-btn" id="mobileMenuButton" type="button" aria-label="Abrir navegación"
+          aria-controls="sidebar" aria-expanded="false"><span></span><span></span><span></span></button>
         <div class="breadcrumb-block">
-          <div class="eyebrow"><span>VANTAGE</span><span class="breadcrumb-slash">/</span><span>MARKETING</span><span class="breadcrumb-slash">/</span><span id="breadcrumbCurrent">CAMPAIGN STUDIO</span></div>
+          <div class="eyebrow"><span>VANTAGE</span><span class="breadcrumb-slash">/</span><span>MARKETING</span><span
+              class="breadcrumb-slash">/</span><span id="breadcrumbCurrent">CAMPAIGN STUDIO</span></div>
           <h1 id="page-title">Gestión de Campañas</h1>
         </div>
         <div class="topbar-right">
@@ -128,7 +140,8 @@
           <div class="live-status"><span class="live-dot"></span><span>WORKSPACE LIVE</span></div>
           <div class="topbar-divider"></div>
           <div class="topbar-date" id="currentDate">MARKETING / HQ</div>
-          <div class="topbar-avatar" id="topbarUserAvatar" title="Admin Vantage (Rol: Administrador)" aria-label="Admin Vantage">AD</div>
+          <div class="topbar-avatar" id="topbarUserAvatar" title="Admin Vantage (Rol: Administrador)"
+            aria-label="Admin Vantage">AD</div>
         </div>
       </header>
 
@@ -138,9 +151,12 @@
           <div class="hero-copy">
             <div class="hero-kicker"><span class="kicker-rule"></span> THE PLAYBOOK / MARKETING DEPARTMENT</div>
             <h2 id="hero-title">HAZ QUE EL DEPORTE<br><span> MUEVA MASAS.</span></h2>
-            <p>Campanas, ofertas y momentos construidos para mover la cultura deportiva. Planifica la próxima acción. Da a tu comunidad una razón para regresar.</p>
+            <p>Campanas, ofertas y momentos construidos para mover la cultura deportiva. Planifica la próxima acción. Da
+              a tu comunidad una razón para regresar.</p>
             <div class="hero-actions">
-              <button class="btn-lime" id="heroNewButton" type="button" onclick="openModal()"><span class="button-plus">＋</span><span id="heroNewButtonText">Crear campaña</span><span class="button-arrow">↗</span></button>
+              <button class="btn-lime" id="heroNewButton" type="button" onclick="openModal()"><span
+                  class="button-plus">＋</span><span id="heroNewButtonText">Crear campaña</span><span
+                  class="button-arrow">↗</span></button>
             </div>
           </div>
           <div class="hero-art" aria-hidden="true">
@@ -153,7 +169,8 @@
             <div class="art-badge"><span>GANÓ</span><span>EL</span><b>PSG</b></div>
             <div class="art-label art-label-top">FIELD / TESTED</div>
             <div class="art-label art-label-bottom">VANTAGE ATHLETIC DEPT.®</div>
-            <div class="art-cross cross-one">＋</div><div class="art-cross cross-two">＋</div>
+            <div class="art-cross cross-one">＋</div>
+            <div class="art-cross cross-two">＋</div>
           </div>
           <div class="hero-index"><span>01</span><span class="hero-index-line"></span><span>06</span></div>
         </section>
@@ -188,7 +205,8 @@
               <h2 id="management-title">Your <span id="managementTitleAccent">campaigns.</span></h2>
               <p id="management-description">Gestiona las campañas de marketing de Vantage desde un solo lugar.</p>
             </div>
-            <div class="section-counter"><span class="counter-dot"></span><span id="recordCountLabel">REGISTROS</span><strong id="recordCount">—</strong></div>
+            <div class="section-counter"><span class="counter-dot"></span><span
+                id="recordCountLabel">REGISTROS</span><strong id="recordCount">—</strong></div>
           </div>
 
           <div class="table-card">
@@ -200,15 +218,26 @@
                 <span class="table-status">SUPABASE CONNECTED</span>
               </div>
               <div class="table-toolbar-actions">
-                <label class="search-box" for="searchInput"><span class="search-symbol" aria-hidden="true">⌕</span><input id="searchInput" type="search" placeholder="Buscar en la tabla…" autocomplete="off" oninput="filterTable()"><kbd>⌘ K</kbd></label>
-                <button class="btn-icon" id="refreshTableButton" type="button" aria-label="Actualizar tabla" title="Actualizar">↻</button>
-                <button class="btn-dark" id="newRecordButton" type="button" onclick="openModal()"><span>＋</span><span>Nuevo registro</span></button>
+                <label class="search-box" for="searchInput"><span class="search-symbol"
+                    aria-hidden="true">⌕</span><input id="searchInput" type="search" placeholder="Buscar en la tabla…"
+                    autocomplete="off" oninput="filterTable()"><kbd>⌘ K</kbd></label>
+                <button class="btn-icon" id="refreshTableButton" type="button" aria-label="Actualizar tabla"
+                  title="Actualizar">↻</button>
+                <button class="btn-dark" id="newRecordButton" type="button"
+                  onclick="openModal()"><span>＋</span><span>Nuevo registro</span></button>
               </div>
             </div>
             <div class="table-responsive" id="tableResponsive">
               <table id="dataTable">
-                <thead><tr id="tableHeaders"></tr></thead>
-                <tbody id="tableBody"><tr><td class="table-placeholder" colspan="10"><span class="loader-mark"></span>Preparando el workspace…</td></tr></tbody>
+                <thead>
+                  <tr id="tableHeaders"></tr>
+                </thead>
+                <tbody id="tableBody">
+                  <tr>
+                    <td class="table-placeholder" colspan="10"><span class="loader-mark"></span>Preparando el workspace…
+                    </td>
+                  </tr>
+                </tbody>
               </table>
             </div>
             <div class="table-footer">
@@ -239,17 +268,17 @@
             <div class="kpi-card card-sales">
               <div class="kpi-label">Ingresos Totales</div>
               <div class="kpi-value" id="kpi-v-ingresos">—</div>
-              <div class="kpi-sub">órdenes pagadas/entregadas</div>
+              <div class="kpi-sub" id="kpi-v-ingresos-sub">órdenes pagadas/entregadas</div>
             </div>
             <div class="kpi-card card-bestseller">
               <div class="kpi-label">Ticket Promedio</div>
               <div class="kpi-value" id="kpi-v-ticket">—</div>
-              <div class="kpi-sub">por orden</div>
+              <div class="kpi-sub" id="kpi-v-ticket-sub">por orden pagada</div>
             </div>
             <div class="kpi-card">
-              <div class="kpi-label">Órdenes Pagadas</div>
+              <div class="kpi-label">Efectividad de Cobro</div>
               <div class="kpi-value" id="kpi-v-pagadas">—</div>
-              <div class="kpi-sub">en el período</div>
+              <div class="kpi-sub" id="kpi-v-pagadas-sub">en el período</div>
             </div>
             <div class="kpi-card card-sales">
               <div class="kpi-label">Mejor Mes</div>
@@ -289,13 +318,13 @@
         </section>
 
         <!-- ══════════════════════════════════════════════════════
-             ANALYTICS: PEDIDOS
+             ANALYTICS: ESTADO DE PEDIDOS
              ══════════════════════════════════════════════════════ -->
         <section id="analytics-section-graf_pedidos" class="admin-analytics-section" style="display:none" aria-label="Gráficas de Pedidos">
           <div class="analytics-control-bar">
             <div>
               <div class="analytics-overline">OPERATIONS / ORDERS</div>
-              <h2 class="analytics-main-title">Pedidos &amp; <span>Órdenes.</span></h2>
+              <h2 class="analytics-main-title">Estado de <span>Pedidos.</span></h2>
             </div>
             <div class="period-pill-group" id="pedidos-period-pills">
               <button class="period-pill active" data-days="365">12M</button>
@@ -308,7 +337,7 @@
             <div class="kpi-card card-sales">
               <div class="kpi-label">Total Pedidos</div>
               <div class="kpi-value" id="kpi-ped-total">—</div>
-              <div class="kpi-sub">en el período</div>
+              <div class="kpi-sub" id="kpi-ped-total-sub">en el período</div>
             </div>
             <div class="kpi-card card-bestseller">
               <div class="kpi-label">Entregados</div>
@@ -323,7 +352,7 @@
             <div class="kpi-card">
               <div class="kpi-label">Pendientes</div>
               <div class="kpi-value" id="kpi-ped-pendientes">—</div>
-              <div class="kpi-sub">esperando acción</div>
+              <div class="kpi-sub" id="kpi-ped-pendientes-sub">esperando acción</div>
             </div>
           </div>
           <div class="analytics-charts-grid">
@@ -376,22 +405,22 @@
             <div class="kpi-card card-shipping">
               <div class="kpi-label">Total Invertido</div>
               <div class="kpi-value" id="kpi-c-total">—</div>
-              <div class="kpi-sub">en compras a proveedores</div>
+              <div class="kpi-sub" id="kpi-c-total-sub">en compras a proveedores</div>
             </div>
             <div class="kpi-card">
               <div class="kpi-label">Órdenes de Compra</div>
               <div class="kpi-value" id="kpi-c-ordenes">—</div>
-              <div class="kpi-sub">en el período</div>
+              <div class="kpi-sub" id="kpi-c-ordenes-sub">en el período</div>
             </div>
             <div class="kpi-card card-sales">
               <div class="kpi-label">Compra Promedio</div>
               <div class="kpi-value" id="kpi-c-promedio">—</div>
-              <div class="kpi-sub">por orden</div>
+              <div class="kpi-sub" id="kpi-c-promedio-sub">por orden</div>
             </div>
             <div class="kpi-card card-bestseller">
               <div class="kpi-label">Proveedores Activos</div>
               <div class="kpi-value" id="kpi-c-proveedores">—</div>
-              <div class="kpi-sub">en el período</div>
+              <div class="kpi-sub" id="kpi-c-proveedores-sub">en el período</div>
             </div>
           </div>
           <div class="analytics-charts-grid">
@@ -425,11 +454,13 @@
           </div>
         </section>
 
-        <footer class="page-footer"><span>VANTAGE® / SPORT IS A STATE OF MIND.</span><span>MARKETING STUDIO <b>—</b> MADE TO MOVE.</span></footer>
+        <footer class="page-footer"><span>VANTAGE® / SPORT IS A STATE OF MIND.</span><span>MARKETING STUDIO <b>—</b>
+            MADE TO MOVE.</span></footer>
       </div>
     </main>
   </div>
+  <div class="mobile-scrim" id="mobileScrim"></div>
   <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
 </body>
-</html>
 
+</html>

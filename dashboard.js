@@ -1,6 +1,6 @@
 /* ==========================================================================
    VantageAnalytics — Gráficas de Ventas, Pedidos y Compras a Proveedores
-   Lee datos REALES de Supabase. No inserta datos.
+   Lee datos REALES de Supabase. Muestra porcentajes (%) y datos absolutos.
    ========================================================================== */
 (() => {
   'use strict';
@@ -52,14 +52,23 @@
   }
 
   /* ── Helpers ─────────────────────────────────────────────────────── */
-  const fmtDOP = n =>
-    (n == null || isNaN(n)) ? '—'
-      : new Intl.NumberFormat('es-DO', { style:'currency', currency:'DOP', maximumFractionDigits:0 }).format(n);
+  const fmtDOP = n => {
+    if (n == null || isNaN(n)) return '—';
+    const val = Math.round(Number(n));
+    return '$' + new Intl.NumberFormat('en-US').format(val);
+  };
 
   const fmtN   = n  => (n == null || isNaN(n)) ? '—' : new Intl.NumberFormat('es').format(n);
-  const fmtPct = n  => (n == null || isNaN(n)) ? '—' : n.toFixed(1) + '%';
-  const set    = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v ?? '—'; };
-  const sb     = ()      => window._supabase || null;
+  
+  function pct(part, total) {
+    const p = parseFloat(part) || 0;
+    const t = parseFloat(total) || 0;
+    if (t <= 0) return '0.0%';
+    return ((p / t) * 100).toFixed(1) + '%';
+  }
+
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v ?? '—'; };
+  const sb  = ()      => window._supabase || null;
 
   function isoMonth(d) { return d ? String(d).slice(0,7) : null; }
   function monthLabel(ym) {
@@ -96,7 +105,6 @@
     const d = new Date(); d.setDate(d.getDate() - days); return d.toISOString();
   }
 
-  /* periodo → meses a mostrar */
   function nMonths(days) {
     if (days <= 30)  return 1;
     if (days <= 90)  return 3;
@@ -142,7 +150,9 @@
     const paid      = all.filter(o => ['pagado','enviado','entregado'].includes(o.estado));
     const cancelled = all.filter(o => o.estado === 'cancelado');
     const totalIng  = paid.reduce((s,o) => s + (parseFloat(o.total)||0), 0);
+    const cancIng   = cancelled.reduce((s,o) => s + (parseFloat(o.total)||0), 0);
     const ticket    = paid.length ? totalIng / paid.length : 0;
+    const rateCobro = pct(paid.length, all.length);
 
     /* Mejor mes */
     const byMonth = groupBy(paid, 'fecha_orden');
@@ -153,21 +163,24 @@
     });
 
     set('kpi-v-ingresos',     fmtDOP(totalIng));
+    set('kpi-v-ingresos-sub', `${rateCobro} de volumen cobrado exitosamente`);
     set('kpi-v-ticket',       fmtDOP(ticket));
-    set('kpi-v-pagadas',      fmtN(paid.length));
+    set('kpi-v-ticket-sub',   `${fmtN(paid.length)} órdenes cobradas en total`);
+    set('kpi-v-pagadas',      `${rateCobro} (${fmtN(paid.length)} / ${fmtN(all.length)})`);
+    set('kpi-v-pagadas-sub',  `${pct(cancelled.length, all.length)} canceladas (${fmtDOP(cancIng)})`);
     set('kpi-v-mejor-mes',    bestM ? monthLabel(bestM) : '—');
-    set('kpi-v-mejor-mes-val', bestV ? fmtDOP(bestV) : 'sin datos');
+    set('kpi-v-mejor-mes-val', bestV ? `${fmtDOP(bestV)} (${pct(bestV, totalIng)} del total)` : 'sin datos');
 
     /* Meses a mostrar */
     const months = lastNMonths(nMonths(days));
 
-    /* Bar — ingresos mensuales */
+    /* Bar — ingresos mensuales con % del período */
     mkChart('chart-ventas-bar', {
       type: 'bar',
       data: {
         labels: months.map(m => monthLabel(m)),
         datasets: [{
-          label: 'Ingresos (DOP)',
+          label: 'Ingresos ($)',
           data: months.map(m => (byMonth[m]||[]).reduce((s,o) => s+(parseFloat(o.total)||0), 0)),
           backgroundColor: LIME_A,
           borderColor: LIME,
@@ -177,6 +190,17 @@
       },
       options: {
         ...baseBar,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const val = ctx.raw || 0;
+                return `Ingresos: ${fmtDOP(val)} (${pct(val, totalIng)} del período)`;
+              }
+            }
+          }
+        },
         scales: {
           x: { grid: gridOpts },
           y: { grid: gridOpts, ticks:{ callback: v => fmtDOP(v) } }
@@ -184,56 +208,89 @@
       }
     });
 
-    /* Donut — métodos de pago */
+    /* Donut — métodos de pago con % en labels y tooltips */
     const { data: pagos } = await client.from('pagos').select('metodo_pago, monto');
     const pagoMap = {};
     (pagos||[]).forEach(p => {
       const k = p.metodo_pago || 'Sin método';
       pagoMap[k] = (pagoMap[k]||0) + (parseFloat(p.monto)||0);
     });
-    const pLabels = Object.keys(pagoMap);
+    const pKeys = Object.keys(pagoMap);
+    const totalPagos = Object.values(pagoMap).reduce((a, b) => a + b, 0);
+    const pLabelsConPct = pKeys.map(k => `${k} (${pct(pagoMap[k], totalPagos)})`);
+
     mkChart('chart-ventas-metodos', {
       type: 'doughnut',
       data: {
-        labels: pLabels.length ? pLabels : ['Sin datos'],
-        datasets: [{ data: pLabels.length ? pLabels.map(k=>pagoMap[k]) : [1],
-          backgroundColor: PALETTE, borderWidth:2, borderColor:'#f2f1eb' }]
+        labels: pLabelsConPct.length ? pLabelsConPct : ['Sin datos (0%)'],
+        datasets: [{
+          data: pKeys.length ? pKeys.map(k=>pagoMap[k]) : [1],
+          backgroundColor: PALETTE,
+          borderWidth: 2,
+          borderColor: '#f2f1eb'
+        }]
       },
       options: {
-        responsive:true, maintainAspectRatio:false,
+        responsive: true,
+        maintainAspectRatio: false,
         plugins: {
-          legend:{ position:'bottom', labels:{ color:'#5c655d', boxWidth:12 } },
-          tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${fmtDOP(ctx.raw)}` } }
+          legend: { position:'bottom', labels:{ color:'#5c655d', boxWidth:12 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const originalLabel = pKeys[ctx.dataIndex] || ctx.label;
+                const val = ctx.raw || 0;
+                return `${originalLabel}: ${fmtDOP(val)} (${pct(val, totalPagos)} del monto total)`;
+              }
+            }
+          }
         }
       }
     });
 
-    /* Línea acumulada */
+    /* Línea acumulada con % de avance */
     const months12 = lastNMonths(12);
     const byM12    = groupBy(paid, 'fecha_orden');
     let acum = 0;
+    const mesVals = months12.map(m => (byM12[m]||[]).reduce((s,o) => s+(parseFloat(o.total)||0), 0));
+    const acumVals = months12.map(m => {
+      acum += (byM12[m]||[]).reduce((s,o) => s+(parseFloat(o.total)||0), 0);
+      return acum;
+    });
+    const totalAcumFinal = acumVals[acumVals.length - 1] || 1;
+
     mkChart('chart-ventas-linea', {
       type: 'line',
       data: {
         labels: months12.map(m => monthLabel(m)),
         datasets: [{
-          label: 'Acumulado (DOP)',
-          data: months12.map(m => {
-            acum += (byM12[m]||[]).reduce((s,o) => s+(parseFloat(o.total)||0), 0);
-            return acum;
-          }),
+          label: 'Acumulado ($)',
+          data: acumVals,
           borderColor: LIME, backgroundColor: LIME_A,
           tension: 0.4, pointBackgroundColor: LIME, pointRadius:4, fill:true
         }, {
-          label: 'Mes actual (DOP)',
-          data: months12.map(m => (byM12[m]||[]).reduce((s,o) => s+(parseFloat(o.total)||0), 0)),
+          label: 'Venta del mes ($)',
+          data: mesVals,
           borderColor: BLUE, backgroundColor: BLUE_A,
           tension: 0.3, pointBackgroundColor: BLUE, pointRadius:3, fill:false
         }]
       },
       options: {
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ position:'top', labels:{ color:'#5c655d', boxWidth:12 } } },
+        plugins:{
+          legend:{ position:'top', labels:{ color:'#5c655d', boxWidth:12 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const val = ctx.raw || 0;
+                if (ctx.datasetIndex === 0) {
+                  return `Acumulado: ${fmtDOP(val)} (${pct(val, totalAcumFinal)} del total anual)`;
+                }
+                return `Mes: ${fmtDOP(val)} (${pct(val, totalIng)} del total período)`;
+              }
+            }
+          }
+        },
         scales:{
           x:{ grid:gridOpts },
           y:{ grid:gridOpts, ticks:{ callback: v => fmtDOP(v) } }
@@ -241,25 +298,41 @@
       }
     });
 
-    /* Pie — estados */
+    /* Pie — estados con % en labels y tooltips */
     const estadoMap = {};
     all.forEach(o => { estadoMap[o.estado] = (estadoMap[o.estado]||0)+1; });
     const eKeys = Object.keys(estadoMap);
+    const totalEst = all.length || 1;
+    const eLabelsConPct = eKeys.map(k => `${k} (${pct(estadoMap[k], totalEst)})`);
+
     mkChart('chart-ventas-estados', {
       type: 'pie',
       data: {
-        labels: eKeys.length ? eKeys : ['Sin datos'],
-        datasets: [{ data: eKeys.length ? eKeys.map(k=>estadoMap[k]) : [1],
+        labels: eLabelsConPct.length ? eLabelsConPct : ['Sin datos (0%)'],
+        datasets: [{
+          data: eKeys.length ? eKeys.map(k=>estadoMap[k]) : [1],
           backgroundColor: eKeys.map(k => ESTADO_COLOR[k]||PURPLE),
-          borderWidth:2, borderColor:'#f2f1eb' }]
+          borderWidth:2, borderColor:'#f2f1eb'
+        }]
       },
       options: {
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ position:'bottom', labels:{ color:'#5c655d', boxWidth:12 } } }
+        plugins:{
+          legend:{ position:'bottom', labels:{ color:'#5c655d', boxWidth:12 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const originalLabel = eKeys[ctx.dataIndex] || ctx.label;
+                const count = ctx.raw || 0;
+                return `${originalLabel}: ${fmtN(count)} órdenes (${pct(count, totalEst)} del total)`;
+              }
+            }
+          }
+        }
       }
     });
 
-    /* Tabla detalle mensual */
+    /* Tabla detalle mensual con % de participación y cancelación */
     const allByMonth = groupBy(all, 'fecha_orden');
     const sortedAll  = Object.keys(allByMonth).sort().reverse();
     const tbody = document.getElementById('ventas-mensual-body');
@@ -271,12 +344,14 @@
         const pRows = rows.filter(o => ['pagado','enviado','entregado'].includes(o.estado));
         const cRows = rows.filter(o => o.estado === 'cancelado');
         const ing   = pRows.reduce((s,o) => s+(parseFloat(o.total)||0), 0);
+        const pIngPct = pct(ing, totalIng);
+        const pCancPct = pct(cRows.length, rows.length);
         return `<tr>
-          <td>${monthLabel(m)}</td>
+          <td><strong>${monthLabel(m)}</strong></td>
           <td>${fmtN(rows.length)}</td>
-          <td>${fmtDOP(ing)}</td>
+          <td>${fmtDOP(ing)} <small style="color:var(--lime,#d4ff3f);font-weight:700">(${pIngPct})</small></td>
           <td>${fmtDOP(pRows.length ? ing/pRows.length : 0)}</td>
-          <td>${fmtN(cRows.length)}</td>
+          <td>${fmtN(cRows.length)} <small style="color:var(--orange,#fc6536)">(${pCancPct})</small></td>
         </tr>`;
       }).join('');
     }
@@ -296,23 +371,27 @@
       client.from('clientes').select('cliente_id, nombre_completo, email').limit(500)
     ]);
 
-    const all       = orders || [];
+    const all        = orders || [];
     const entregados = all.filter(o => o.estado === 'entregado').length;
     const cancelados = all.filter(o => o.estado === 'cancelado').length;
     const pendientes = all.filter(o => o.estado === 'pendiente').length;
+    const pagados    = all.filter(o => o.estado === 'pagado').length;
+    const enviados   = all.filter(o => o.estado === 'enviado').length;
     const total      = all.length;
 
-    set('kpi-ped-total',          fmtN(total));
-    set('kpi-ped-entregados',     fmtN(entregados));
-    set('kpi-ped-entregados-pct', total ? fmtPct(entregados/total*100)+' completados' : '—');
-    set('kpi-ped-cancelados',     fmtN(cancelados));
-    set('kpi-ped-cancelados-pct', total ? fmtPct(cancelados/total*100)+' del total'  : '—');
-    set('kpi-ped-pendientes',     fmtN(pendientes));
+    set('kpi-ped-total',          `${fmtN(total)}`);
+    set('kpi-ped-total-sub',      `${pct(entregados, total)} completados con éxito`);
+    set('kpi-ped-entregados',     `${pct(entregados, total)}`);
+    set('kpi-ped-entregados-pct', `${fmtN(entregados)} de ${fmtN(total)} pedidos entregados`);
+    set('kpi-ped-cancelados',     `${pct(cancelados, total)}`);
+    set('kpi-ped-cancelados-pct', `${fmtN(cancelados)} pedidos cancelados`);
+    set('kpi-ped-pendientes',     `${pct(pendientes, total)}`);
+    set('kpi-ped-pendientes-sub', `${fmtN(pendientes)} pedidos pendientes de preparar`);
 
     /* Meses */
     const months = lastNMonths(nMonths(days));
 
-    /* Stacked bar por estado */
+    /* Stacked bar por estado con % del mes en tooltip */
     const estados = ['pendiente','pagado','enviado','entregado','cancelado'];
     const byMonth = groupBy(all, 'fecha_orden');
 
@@ -331,7 +410,20 @@
       },
       options: {
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ position:'top', labels:{ color:'#5c655d', boxWidth:12 } } },
+        plugins:{
+          legend:{ position:'top', labels:{ color:'#5c655d', boxWidth:12 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const mesIdx = ctx.dataIndex;
+                const m = months[mesIdx];
+                const totalMes = (byMonth[m]||[]).length;
+                const val = ctx.raw || 0;
+                return `${ctx.dataset.label}: ${val} pedidos (${pct(val, totalMes)} del mes)`;
+              }
+            }
+          }
+        },
         scales:{
           x:{ stacked:true, grid:gridOpts },
           y:{ stacked:true, grid:gridOpts, ticks:{ stepSize:1 } }
@@ -339,33 +431,50 @@
       }
     });
 
-    /* Donut estados */
+    /* Donut estados con % en leyenda y tooltip */
     const estadoMap = {};
     all.forEach(o => { estadoMap[o.estado] = (estadoMap[o.estado]||0)+1; });
     const eKeys = Object.keys(estadoMap);
+    const eLabelsConPct = eKeys.map(k => `${k} (${pct(estadoMap[k], total)})`);
+
     mkChart('chart-pedidos-estados', {
       type: 'doughnut',
       data: {
-        labels: eKeys.length ? eKeys : ['Sin datos'],
-        datasets: [{ data: eKeys.length ? eKeys.map(k=>estadoMap[k]) : [1],
+        labels: eLabelsConPct.length ? eLabelsConPct : ['Sin datos (0%)'],
+        datasets: [{
+          data: eKeys.length ? eKeys.map(k=>estadoMap[k]) : [1],
           backgroundColor: eKeys.map(k => ESTADO_COLOR[k]||PURPLE),
-          borderWidth:2, borderColor:'#f2f1eb' }]
+          borderWidth:2, borderColor:'#f2f1eb'
+        }]
       },
       options: {
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ position:'bottom', labels:{ color:'#5c655d', boxWidth:12 } } }
+        plugins:{
+          legend:{ position:'bottom', labels:{ color:'#5c655d', boxWidth:12 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const originalLabel = eKeys[ctx.dataIndex] || ctx.label;
+                const count = ctx.raw || 0;
+                return `${originalLabel}: ${fmtN(count)} pedidos (${pct(count, total)} del total)`;
+              }
+            }
+          }
+        }
       }
     });
 
     /* Línea — ticket promedio por mes */
     const paidOrders = all.filter(o => ['pagado','enviado','entregado'].includes(o.estado));
     const pByMonth   = groupBy(paidOrders, 'fecha_orden');
+    const overallTicket = paidOrders.length ? paidOrders.reduce((s,o)=>s+(parseFloat(o.total)||0),0)/paidOrders.length : 1;
+
     mkChart('chart-pedidos-ticket', {
       type: 'line',
       data: {
         labels: months.map(m => monthLabel(m)),
         datasets: [{
-          label: 'Ticket prom. (DOP)',
+          label: 'Ticket prom. ($)',
           data: months.map(m => {
             const rows = pByMonth[m]||[];
             const sum  = rows.reduce((s,o) => s+(parseFloat(o.total)||0), 0);
@@ -377,7 +486,18 @@
       },
       options: {
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ display:false } },
+        plugins:{
+          legend:{ display:false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const val = ctx.raw || 0;
+                const relPct = overallTicket > 0 ? ((val / overallTicket) * 100).toFixed(1) + '%' : '100%';
+                return `Ticket: ${fmtDOP(val)} (${relPct} vs promedio general)`;
+              }
+            }
+          }
+        },
         scales:{
           x:{ grid:gridOpts },
           y:{ grid:gridOpts, ticks:{ callback: v => fmtDOP(v) } }
@@ -385,7 +505,7 @@
       }
     });
 
-    /* Bar — top 5 clientes por volumen de órdenes */
+    /* Bar — top 5 clientes por volumen de órdenes con % */
     const clientMap = {};
     (clientes||[]).forEach(c => {
       clientMap[c.cliente_id] = c.nombre_completo || c.email || `#${c.cliente_id}`;
@@ -413,12 +533,22 @@
       options: {
         indexAxis: 'y',
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ display:false } },
+        plugins:{
+          legend:{ display:false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const count = ctx.raw || 0;
+                return `${count} pedidos (${pct(count, total)} de todas las órdenes)`;
+              }
+            }
+          }
+        },
         scales:{ x:{ grid:gridOpts }, y:{ grid:{ display:false } } }
       }
     });
 
-    /* Tabla últimos 30 pedidos */
+    /* Tabla últimos 30 pedidos con badge de estado */
     const tbody = document.getElementById('pedidos-recent-body');
     const recent = [...all].sort((a,b) => new Date(b.fecha_orden)-new Date(a.fecha_orden)).slice(0,30);
     if (!recent.length) {
@@ -428,7 +558,7 @@
       tbody.innerHTML = recent.map(o => {
         const color = badgeColor(o.estado);
         return `<tr>
-          <td>${o.codigo||o.id_orden}</td>
+          <td><strong>${o.codigo||o.id_orden}</strong></td>
           <td>${localDate(o.fecha_orden)}</td>
           <td>${fmtDOP(parseFloat(o.total)||0)}</td>
           <td><span class="envio-badge" style="background:${color}22;color:${color};border-color:${color}44">${o.estado}</span></td>
@@ -459,22 +589,28 @@
     const totalInv  = all.reduce((s,c) => s+(parseFloat(c.total_pedido)||0), 0);
     const promedio  = all.length ? totalInv / all.length : 0;
     const provUniq  = new Set(all.map(c => c.proveedor_id).filter(Boolean));
+    const recibidas = all.filter(c => c.estado === 'recibido').length;
+    const totalProvRegistrados = (proveedores||[]).length || 1;
 
-    set('kpi-c-total',       fmtDOP(totalInv));
-    set('kpi-c-ordenes',     fmtN(all.length));
-    set('kpi-c-promedio',    fmtDOP(promedio));
-    set('kpi-c-proveedores', fmtN(provUniq.size));
+    set('kpi-c-total',           fmtDOP(totalInv));
+    set('kpi-c-total-sub',       `${fmtN(all.length)} órdenes de abastecimiento`);
+    set('kpi-c-ordenes',         `${fmtN(all.length)}`);
+    set('kpi-c-ordenes-sub',     `${pct(recibidas, all.length)} recibidas en almacén`);
+    set('kpi-c-promedio',        fmtDOP(promedio));
+    set('kpi-c-promedio-sub',    `inversión media por compra`);
+    set('kpi-c-proveedores',     `${fmtN(provUniq.size)} proveedores`);
+    set('kpi-c-proveedores-sub', `${pct(provUniq.size, totalProvRegistrados)} del total registrado activo`);
 
     const months = lastNMonths(nMonths(days));
 
-    /* Bar — compras por mes */
+    /* Bar — compras por mes con % */
     const byMonth = groupBy(all, 'fecha_pedido');
     mkChart('chart-compras-bar', {
       type: 'bar',
       data: {
         labels: months.map(m => monthLabel(m)),
         datasets: [{
-          label: 'Inversión (DOP)',
+          label: 'Inversión ($)',
           data: months.map(m => (byMonth[m]||[]).reduce((s,c)=>s+(parseFloat(c.total_pedido)||0),0)),
           backgroundColor: BLUE_A,
           borderColor: BLUE,
@@ -483,6 +619,17 @@
       },
       options: {
         ...baseBar,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const val = ctx.raw || 0;
+                return `Inversión: ${fmtDOP(val)} (${pct(val, totalInv)} del gasto total)`;
+              }
+            }
+          }
+        },
         scales:{
           x:{ grid:gridOpts },
           y:{ grid:gridOpts, ticks:{ callback: v => fmtDOP(v) } }
@@ -490,47 +637,62 @@
       }
     });
 
-    /* Donut — gasto por proveedor */
+    /* Donut — gasto por proveedor con % en leyenda y tooltip */
     const provGasto = {};
     all.forEach(c => {
       const k = provMap[c.proveedor_id] || 'Desconocido';
       provGasto[k] = (provGasto[k]||0) + (parseFloat(c.total_pedido)||0);
     });
     const pgKeys = Object.keys(provGasto).sort((a,b) => provGasto[b]-provGasto[a]).slice(0,8);
+    const pgLabelsConPct = pgKeys.map(k => `${k.slice(0, 16)} (${pct(provGasto[k], totalInv)})`);
+
     mkChart('chart-compras-proveedores', {
       type: 'doughnut',
       data: {
-        labels: pgKeys.length ? pgKeys : ['Sin datos'],
-        datasets: [{ data: pgKeys.length ? pgKeys.map(k=>provGasto[k]) : [1],
-          backgroundColor: PALETTE, borderWidth:2, borderColor:'#f2f1eb' }]
+        labels: pgLabelsConPct.length ? pgLabelsConPct : ['Sin datos (0%)'],
+        datasets: [{
+          data: pgKeys.length ? pgKeys.map(k=>provGasto[k]) : [1],
+          backgroundColor: PALETTE,
+          borderWidth: 2,
+          borderColor: '#f2f1eb'
+        }]
       },
       options: {
         responsive:true, maintainAspectRatio:false,
         plugins:{
           legend:{ position:'bottom', labels:{ color:'#5c655d', boxWidth:12 } },
-          tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${fmtDOP(ctx.raw)}` } }
+          tooltip:{
+            callbacks:{
+              label: ctx => {
+                const originalName = pgKeys[ctx.dataIndex] || ctx.label;
+                const val = ctx.raw || 0;
+                return `${originalName}: ${fmtDOP(val)} (${pct(val, totalInv)} del presupuesto)`;
+              }
+            }
+          }
         }
       }
     });
 
-    /* Línea — compras vs ventas por mes (12 meses) */
+    /* Línea — compras vs ventas con ratio % */
     const months12  = lastNMonths(12);
     const cByM12    = groupBy(all, 'fecha_pedido');
     const vAll      = (ventas||[]).filter(o => ['pagado','enviado','entregado'].includes(o.estado));
     const vByM12    = groupBy(vAll, 'fecha_orden');
+
     mkChart('chart-compras-vs-ventas', {
       type: 'line',
       data: {
         labels: months12.map(m => monthLabel(m)),
         datasets: [
           {
-            label: 'Compras (DOP)',
+            label: 'Compras ($)',
             data: months12.map(m => (cByM12[m]||[]).reduce((s,c)=>s+(parseFloat(c.total_pedido)||0),0)),
             borderColor: BLUE, backgroundColor: BLUE_A,
             tension:0.4, pointBackgroundColor:BLUE, pointRadius:4, fill:true
           },
           {
-            label: 'Ventas (DOP)',
+            label: 'Ventas ($)',
             data: months12.map(m => (vByM12[m]||[]).reduce((s,o)=>s+(parseFloat(o.total)||0),0)),
             borderColor: LIME, backgroundColor: LIME_A,
             tension:0.4, pointBackgroundColor:LIME, pointRadius:4, fill:true
@@ -539,7 +701,25 @@
       },
       options: {
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ position:'top', labels:{ color:'#5c655d', boxWidth:12 } } },
+        plugins:{
+          legend:{ position:'top', labels:{ color:'#5c655d', boxWidth:12 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => `${ctx.dataset.label}: ${fmtDOP(ctx.raw || 0)}`,
+              afterBody: ctxList => {
+                if (!ctxList || !ctxList.length) return [];
+                const mesIdx = ctxList[0].dataIndex;
+                const m = months12[mesIdx];
+                const cVal = (cByM12[m]||[]).reduce((s,c)=>s+(parseFloat(c.total_pedido)||0),0);
+                const vVal = (vByM12[m]||[]).reduce((s,o)=>s+(parseFloat(o.total)||0),0);
+                if (vVal > 0) {
+                  return [`Ratio Compras / Ventas: ${pct(cVal, vVal)}`];
+                }
+                return [];
+              }
+            }
+          }
+        },
         scales:{
           x:{ grid:gridOpts },
           y:{ grid:gridOpts, ticks:{ callback: v => fmtDOP(v) } }
@@ -547,21 +727,37 @@
       }
     });
 
-    /* Pie — estado de órdenes de compra */
+    /* Pie — estado de órdenes de compra con % */
     const estMap = {};
     all.forEach(c => { estMap[c.estado] = (estMap[c.estado]||0)+1; });
     const estKeys = Object.keys(estMap);
+    const totalCompras = all.length || 1;
+    const estLabelsConPct = estKeys.map(k => `${k} (${pct(estMap[k], totalCompras)})`);
+
     mkChart('chart-compras-estados', {
       type: 'pie',
       data: {
-        labels: estKeys.length ? estKeys : ['Sin datos'],
-        datasets: [{ data: estKeys.length ? estKeys.map(k=>estMap[k]) : [1],
+        labels: estLabelsConPct.length ? estLabelsConPct : ['Sin datos (0%)'],
+        datasets: [{
+          data: estKeys.length ? estKeys.map(k=>estMap[k]) : [1],
           backgroundColor: [YELLOW, GREEN, LIME, ORANGE, PURPLE].slice(0, Math.max(estKeys.length,1)),
-          borderWidth:2, borderColor:'#f2f1eb' }]
+          borderWidth:2, borderColor:'#f2f1eb'
+        }]
       },
       options: {
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ position:'bottom', labels:{ color:'#5c655d', boxWidth:12 } } }
+        plugins:{
+          legend:{ position:'bottom', labels:{ color:'#5c655d', boxWidth:12 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const originalLabel = estKeys[ctx.dataIndex] || ctx.label;
+                const count = ctx.raw || 0;
+                return `${originalLabel}: ${fmtN(count)} órdenes (${pct(count, totalCompras)} del total)`;
+              }
+            }
+          }
+        }
       }
     });
 
@@ -573,11 +769,12 @@
     } else {
       tbody.innerHTML = recent.map(c => {
         const color = { pendiente:YELLOW, recibido:GREEN, cancelado:ORANGE }[c.estado] || PURPLE;
+        const pctGasto = pct(c.total_pedido, totalInv);
         return `<tr>
-          <td>#${c.orden_id}</td>
+          <td><strong>#${c.orden_id}</strong></td>
           <td>${provMap[c.proveedor_id]||'—'}</td>
           <td>${localDate(c.fecha_pedido)}</td>
-          <td>${fmtDOP(parseFloat(c.total_pedido)||0)}</td>
+          <td>${fmtDOP(parseFloat(c.total_pedido)||0)} <small style="color:#4EB8FF;font-weight:700">(${pctGasto})</small></td>
           <td><span class="envio-badge" style="background:${color}22;color:${color};border-color:${color}44">${c.estado||'—'}</span></td>
         </tr>`;
       }).join('');
