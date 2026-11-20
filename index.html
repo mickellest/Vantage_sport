@@ -10,9 +10,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="Java.js" defer></script>
+  <script src="dashboard.js" defer></script>
 </head>
 <body>
   <div class="app-shell">
@@ -31,7 +33,21 @@
       </div>
 
       <nav class="nav-groups" aria-label="Navegación principal">
-        <div class="nav-label"> DISEÑO DE PUBLICIDAD</div>
+        <div class="nav-label">DISEÑO DE PUBLICIDAD</div>
+
+        <!-- ── ANALYTICS ─────────────────────────────────── -->
+        <div class="nav-label nav-label-spaced">ANALÍTICA / DASHBOARD</div>
+        <button class="nav-item" data-tab="graf_ventas" onclick="switchTab(event,'graf_ventas')" type="button">
+          <span class="nav-icon" aria-hidden="true">📈</span><span>Ventas</span><span class="nav-tag">LIVE</span>
+        </button>
+        <button class="nav-item" data-tab="graf_pedidos" onclick="switchTab(event,'graf_pedidos')" type="button">
+          <span class="nav-icon" aria-hidden="true">📦</span><span>Pedidos</span>
+        </button>
+        <button class="nav-item" data-tab="graf_compras" onclick="switchTab(event,'graf_compras')" type="button">
+          <span class="nav-icon" aria-hidden="true">🛒</span><span>Compras a Proveedores</span>
+        </button>
+
+        <div class="nav-label nav-label-spaced">DISEÑO DE PUBLICIDAD</div>
         <button class="nav-item active" data-tab="campana" onclick="switchTab(event, 'campana')" type="button">
           <span class="nav-icon icon-campaign" aria-hidden="true">↗</span><span>Campañas</span><span class="nav-arrow">↗</span>
         </button>
@@ -203,11 +219,216 @@
           </div>
         </section>
 
+        <!-- ══════════════════════════════════════════════════════
+             ANALYTICS: VENTAS
+             ══════════════════════════════════════════════════════ -->
+        <section id="analytics-section-graf_ventas" class="admin-analytics-section" style="display:none" aria-label="Gráficas de Ventas">
+          <div class="analytics-control-bar">
+            <div>
+              <div class="analytics-overline">COMMERCE / REVENUE</div>
+              <h2 class="analytics-main-title">Ventas &amp; <span>Ingresos.</span></h2>
+            </div>
+            <div class="period-pill-group" id="ventas-period-pills">
+              <button class="period-pill active" data-days="365">12M</button>
+              <button class="period-pill" data-days="180">6M</button>
+              <button class="period-pill" data-days="90">3M</button>
+              <button class="period-pill" data-days="30">30D</button>
+            </div>
+          </div>
+          <div class="analytics-kpi-grid">
+            <div class="kpi-card card-sales">
+              <div class="kpi-label">Ingresos Totales</div>
+              <div class="kpi-value" id="kpi-v-ingresos">—</div>
+              <div class="kpi-sub">órdenes pagadas/entregadas</div>
+            </div>
+            <div class="kpi-card card-bestseller">
+              <div class="kpi-label">Ticket Promedio</div>
+              <div class="kpi-value" id="kpi-v-ticket">—</div>
+              <div class="kpi-sub">por orden</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Órdenes Pagadas</div>
+              <div class="kpi-value" id="kpi-v-pagadas">—</div>
+              <div class="kpi-sub">en el período</div>
+            </div>
+            <div class="kpi-card card-sales">
+              <div class="kpi-label">Mejor Mes</div>
+              <div class="kpi-value kpi-value-sm" id="kpi-v-mejor-mes">—</div>
+              <div class="kpi-sub" id="kpi-v-mejor-mes-val">en ventas</div>
+            </div>
+          </div>
+          <div class="analytics-charts-grid">
+            <div class="chart-card">
+              <div class="chart-card-head"><span>INGRESOS MENSUALES</span><span class="chart-badge">barras</span></div>
+              <div class="chart-wrap"><canvas id="chart-ventas-bar"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-card-head"><span>MÉTODOS DE PAGO</span><span class="chart-badge">donut</span></div>
+              <div class="chart-wrap chart-wrap-sm"><canvas id="chart-ventas-metodos"></canvas></div>
+            </div>
+          </div>
+          <div class="analytics-charts-grid">
+            <div class="chart-card">
+              <div class="chart-card-head"><span>TENDENCIA ACUMULADA</span><span class="chart-badge">12 meses</span></div>
+              <div class="chart-wrap"><canvas id="chart-ventas-linea"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-card-head"><span>ESTADOS DE ÓRDENES</span><span class="chart-badge">pie</span></div>
+              <div class="chart-wrap chart-wrap-sm"><canvas id="chart-ventas-estados"></canvas></div>
+            </div>
+          </div>
+          <div class="bestsellers-section">
+            <div class="analytics-subheader">DETALLE MENSUAL</div>
+            <div class="table-card"><div class="table-responsive">
+              <table class="analytics-table">
+                <thead><tr><th>Mes</th><th>Órdenes</th><th>Ingresos</th><th>Ticket Prom.</th><th>Canceladas</th></tr></thead>
+                <tbody id="ventas-mensual-body"><tr><td colspan="5" class="table-placeholder">Cargando…</td></tr></tbody>
+              </table>
+            </div></div>
+          </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════
+             ANALYTICS: PEDIDOS
+             ══════════════════════════════════════════════════════ -->
+        <section id="analytics-section-graf_pedidos" class="admin-analytics-section" style="display:none" aria-label="Gráficas de Pedidos">
+          <div class="analytics-control-bar">
+            <div>
+              <div class="analytics-overline">OPERATIONS / ORDERS</div>
+              <h2 class="analytics-main-title">Pedidos &amp; <span>Órdenes.</span></h2>
+            </div>
+            <div class="period-pill-group" id="pedidos-period-pills">
+              <button class="period-pill active" data-days="365">12M</button>
+              <button class="period-pill" data-days="180">6M</button>
+              <button class="period-pill" data-days="90">3M</button>
+              <button class="period-pill" data-days="30">30D</button>
+            </div>
+          </div>
+          <div class="analytics-kpi-grid">
+            <div class="kpi-card card-sales">
+              <div class="kpi-label">Total Pedidos</div>
+              <div class="kpi-value" id="kpi-ped-total">—</div>
+              <div class="kpi-sub">en el período</div>
+            </div>
+            <div class="kpi-card card-bestseller">
+              <div class="kpi-label">Entregados</div>
+              <div class="kpi-value" id="kpi-ped-entregados">—</div>
+              <div class="kpi-sub" id="kpi-ped-entregados-pct">— % completados</div>
+            </div>
+            <div class="kpi-card card-loss">
+              <div class="kpi-label">Cancelados</div>
+              <div class="kpi-value" id="kpi-ped-cancelados">—</div>
+              <div class="kpi-sub" id="kpi-ped-cancelados-pct">— % del total</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Pendientes</div>
+              <div class="kpi-value" id="kpi-ped-pendientes">—</div>
+              <div class="kpi-sub">esperando acción</div>
+            </div>
+          </div>
+          <div class="analytics-charts-grid">
+            <div class="chart-card">
+              <div class="chart-card-head"><span>PEDIDOS POR MES — APILADO</span><span class="chart-badge">estados</span></div>
+              <div class="chart-wrap"><canvas id="chart-pedidos-bar"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-card-head"><span>DISTRIBUCIÓN DE ESTADOS</span><span class="chart-badge">donut</span></div>
+              <div class="chart-wrap chart-wrap-sm"><canvas id="chart-pedidos-estados"></canvas></div>
+            </div>
+          </div>
+          <div class="analytics-charts-grid">
+            <div class="chart-card">
+              <div class="chart-card-head"><span>TICKET PROMEDIO POR MES</span><span class="chart-badge">línea</span></div>
+              <div class="chart-wrap"><canvas id="chart-pedidos-ticket"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-card-head"><span>TOP 5 CLIENTES POR VOLUMEN</span><span class="chart-badge">barras</span></div>
+              <div class="chart-wrap chart-wrap-sm"><canvas id="chart-pedidos-clientes"></canvas></div>
+            </div>
+          </div>
+          <div class="bestsellers-section">
+            <div class="analytics-subheader">ÚLTIMOS 30 PEDIDOS</div>
+            <div class="table-card"><div class="table-responsive">
+              <table class="analytics-table">
+                <thead><tr><th>Código</th><th>Fecha</th><th>Total</th><th>Estado</th></tr></thead>
+                <tbody id="pedidos-recent-body"><tr><td colspan="4" class="table-placeholder">Cargando…</td></tr></tbody>
+              </table>
+            </div></div>
+          </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════
+             ANALYTICS: COMPRAS A PROVEEDORES
+             ══════════════════════════════════════════════════════ -->
+        <section id="analytics-section-graf_compras" class="admin-analytics-section" style="display:none" aria-label="Gráficas de Compras">
+          <div class="analytics-control-bar">
+            <div>
+              <div class="analytics-overline">SUPPLY CHAIN / PROCUREMENT</div>
+              <h2 class="analytics-main-title">Compras a <span>Proveedores.</span></h2>
+            </div>
+            <div class="period-pill-group" id="compras-period-pills">
+              <button class="period-pill active" data-days="365">12M</button>
+              <button class="period-pill" data-days="180">6M</button>
+              <button class="period-pill" data-days="90">3M</button>
+            </div>
+          </div>
+          <div class="analytics-kpi-grid">
+            <div class="kpi-card card-shipping">
+              <div class="kpi-label">Total Invertido</div>
+              <div class="kpi-value" id="kpi-c-total">—</div>
+              <div class="kpi-sub">en compras a proveedores</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Órdenes de Compra</div>
+              <div class="kpi-value" id="kpi-c-ordenes">—</div>
+              <div class="kpi-sub">en el período</div>
+            </div>
+            <div class="kpi-card card-sales">
+              <div class="kpi-label">Compra Promedio</div>
+              <div class="kpi-value" id="kpi-c-promedio">—</div>
+              <div class="kpi-sub">por orden</div>
+            </div>
+            <div class="kpi-card card-bestseller">
+              <div class="kpi-label">Proveedores Activos</div>
+              <div class="kpi-value" id="kpi-c-proveedores">—</div>
+              <div class="kpi-sub">en el período</div>
+            </div>
+          </div>
+          <div class="analytics-charts-grid">
+            <div class="chart-card">
+              <div class="chart-card-head"><span>COMPRAS POR MES</span><span class="chart-badge">barras</span></div>
+              <div class="chart-wrap"><canvas id="chart-compras-bar"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-card-head"><span>GASTO POR PROVEEDOR</span><span class="chart-badge">donut</span></div>
+              <div class="chart-wrap chart-wrap-sm"><canvas id="chart-compras-proveedores"></canvas></div>
+            </div>
+          </div>
+          <div class="analytics-charts-grid">
+            <div class="chart-card">
+              <div class="chart-card-head"><span>COMPARATIVA COMPRAS vs VENTAS</span><span class="chart-badge">línea</span></div>
+              <div class="chart-wrap"><canvas id="chart-compras-vs-ventas"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-card-head"><span>ESTADO ÓRDENES DE COMPRA</span><span class="chart-badge">pie</span></div>
+              <div class="chart-wrap chart-wrap-sm"><canvas id="chart-compras-estados"></canvas></div>
+            </div>
+          </div>
+          <div class="bestsellers-section">
+            <div class="analytics-subheader">ÓRDENES DE COMPRA RECIENTES</div>
+            <div class="table-card"><div class="table-responsive">
+              <table class="analytics-table">
+                <thead><tr><th>ID</th><th>Proveedor</th><th>Fecha Pedido</th><th>Total</th><th>Estado</th></tr></thead>
+                <tbody id="compras-recent-body"><tr><td colspan="5" class="table-placeholder">Cargando…</td></tr></tbody>
+              </table>
+            </div></div>
+          </div>
+        </section>
+
         <footer class="page-footer"><span>VANTAGE® / SPORT IS A STATE OF MIND.</span><span>MARKETING STUDIO <b>—</b> MADE TO MOVE.</span></footer>
       </div>
     </main>
   </div>
-  <div class="mobile-scrim" id="mobileScrim"></div>
   <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
 </body>
 </html>

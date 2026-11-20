@@ -314,3 +314,226 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+
+/* ==========================================================================
+   VANTAGE ANALYTICS DASHBOARD — Ventas, Pedidos, Compras
+   ========================================================================== */
+
+/* ── Sección analytics base ──────────────────────────────────────── */
+.admin-analytics-section {
+  margin-top: 32px;
+  animation: fadeInUp .22s ease both;
+}
+@keyframes fadeInUp {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0);    }
+}
+
+/* ── Control bar (cabecera oscura con borde lime) ────────────────── */
+.analytics-control-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 16px 20px;
+  background: var(--ink-deep, #101411);
+  border: 1px solid #2b362c;
+  border-left: 4px solid var(--lime, #d4ff3f);
+  margin-bottom: 22px;
+  border-radius: 2px;
+}
+
+.analytics-overline {
+  font: 800 9px/1 var(--font-display, 'Barlow Condensed', sans-serif);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #9ba397;
+  margin-bottom: 4px;
+}
+
+.analytics-main-title {
+  margin: 0;
+  font: 800 clamp(26px, 3vw, 42px)/1 var(--font-display, 'Barlow Condensed', sans-serif);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #eff0e6;
+}
+.analytics-main-title span { color: var(--lime, #d4ff3f); }
+
+.analytics-subheader {
+  font: 800 9px/1 var(--font-display, 'Barlow Condensed', sans-serif);
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--muted-dark, #5c655d);
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+/* ── Period pills ────────────────────────────────────────────────── */
+.period-pill-group {
+  display: inline-flex;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 4px;
+  padding: 2px;
+  gap: 2px;
+}
+.period-pill {
+  padding: 6px 12px;
+  border: 0;
+  background: transparent;
+  color: #9ba397;
+  font: 700 10px/1 var(--font-display, 'Barlow Condensed', sans-serif);
+  letter-spacing: .6px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all .18s;
+}
+.period-pill:hover { color: #fff; }
+.period-pill.active { background: var(--lime, #d4ff3f); color: var(--ink-deep, #101411); font-weight: 800; }
+
+/* ── KPI Grid ────────────────────────────────────────────────────── */
+.analytics-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.kpi-card {
+  position: relative;
+  background: var(--paper-white, #fbfaf5);
+  border: 1px solid #dfe1d7;
+  padding: 18px 20px 16px;
+  box-shadow: 0 4px 20px rgba(16,20,17,.03);
+  transition: transform .2s, border-color .2s;
+}
+.kpi-card:hover { transform: translateY(-2px); border-color: #c4c7bc; }
+
+.kpi-label {
+  font: 800 8px/1 var(--font-display, 'Barlow Condensed', sans-serif);
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: #7b8377;
+  margin-bottom: 8px;
+}
+.kpi-value {
+  font: 800 clamp(28px, 2.6vw, 42px)/0.92 var(--font-display, 'Barlow Condensed', sans-serif);
+  color: var(--ink, #191e1b);
+  letter-spacing: .5px;
+  margin-bottom: 8px;
+}
+.kpi-value-sm { font-size: clamp(18px, 2vw, 28px) !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.kpi-sub { font-size: 10px; color: #778074; }
+
+/* Variantes de color */
+.kpi-card.card-sales   { background:#1d251f; border-left:4px solid var(--lime,#d4ff3f); color:#fff; border-color:#2f3a30; }
+.kpi-card.card-sales .kpi-label { color:#a4afa0; }
+.kpi-card.card-sales .kpi-value { color:var(--lime,#d4ff3f); }
+.kpi-card.card-sales .kpi-sub   { color:#9da798; }
+
+.kpi-card.card-loss    { background:#251e1c; border-left:4px solid var(--orange,#fc6536); color:#fff; border-color:rgba(252,101,54,.35); }
+.kpi-card.card-loss .kpi-label { color:#e3aba0; }
+.kpi-card.card-loss .kpi-value { color:var(--orange,#fc6536); }
+.kpi-card.card-loss .kpi-sub   { color:#d1aba2; }
+
+.kpi-card.card-bestseller { background:#192019; border-left:4px solid #52d68a; color:#fff; border-color:#313d30; }
+.kpi-card.card-bestseller .kpi-label { color:#a4afa0; }
+.kpi-card.card-bestseller .kpi-value { color:#52d68a; }
+.kpi-card.card-bestseller .kpi-sub   { color:#9da798; }
+
+.kpi-card.card-shipping { background:#131c24; border-left:4px solid #4EB8FF; color:#fff; border-color:rgba(78,184,255,.35); }
+.kpi-card.card-shipping .kpi-label { color:#90b8cc; }
+.kpi-card.card-shipping .kpi-value { color:#4EB8FF; }
+.kpi-card.card-shipping .kpi-sub   { color:#6fa0b4; }
+
+/* ── Charts Grid (2 col) ─────────────────────────────────────────── */
+.analytics-charts-grid {
+  display: grid;
+  grid-template-columns: 1.65fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.chart-card {
+  background: var(--paper-white, #fbfaf5);
+  border: 1px solid #dedfd6;
+  padding: 20px 22px 18px;
+  box-shadow: 0 4px 22px rgba(24,30,24,.025);
+}
+
+.chart-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  font: 800 10px/1 var(--font-display, 'Barlow Condensed', sans-serif);
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--ink, #191e1b);
+}
+.chart-badge {
+  font: 700 9px/1 var(--font-display, 'Barlow Condensed', sans-serif);
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  background: rgba(0,0,0,.06);
+  border: 1px solid #d8dbd0;
+  border-radius: 2px;
+  color: #7c8578;
+}
+
+.chart-wrap     { position:relative; width:100%; height:240px; }
+.chart-wrap-sm  { height: 220px; }
+
+/* ── Tabla analytics ─────────────────────────────────────────────── */
+.bestsellers-section { margin-bottom: 24px; }
+
+.analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.analytics-table thead th {
+  background: var(--ink-deep, #101411);
+  color: #9ba397;
+  font: 800 9px/1 var(--font-display, 'Barlow Condensed', sans-serif);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid #2c332d;
+}
+.analytics-table tbody tr { border-bottom: 1px solid #edeee5; transition: background .15s; }
+.analytics-table tbody tr:hover { background: rgba(212,255,63,.04); }
+.analytics-table tbody td { padding: 11px 14px; color: var(--ink, #191e1b); vertical-align:middle; }
+.analytics-table .table-placeholder { text-align:center; padding:32px; color:#8c9588; font-size:12px; }
+
+/* ── Estado badge (compartido con envíos) ────────────────────────── */
+.envio-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid;
+  font: 700 10px/1 var(--font-display, 'Barlow Condensed', sans-serif);
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .analytics-kpi-grid      { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .analytics-charts-grid   { grid-template-columns: 1fr; }
+}
+@media (max-width: 650px) {
+  .analytics-kpi-grid      { grid-template-columns: 1fr; }
+  .analytics-control-bar   { flex-direction: column; align-items: flex-start; }
+  .period-pill-group        { width: 100%; justify-content: space-between; }
+  .chart-wrap               { height: 200px; }
+  .chart-wrap-sm            { height: 180px; }
+}

@@ -509,8 +509,58 @@
     }
   };
 
+  /* ─── Analytics tabs intercept ──────────────────────────────────── */
+  const ANALYTICS_TABS = ['graf_ventas', 'graf_pedidos', 'graf_compras'];
+
+  const ANALYTICS_META = {
+    graf_ventas:  { title: 'Ventas e Ingresos',           breadcrumb: 'ANALYTICS / VENTAS'      },
+    graf_pedidos: { title: 'Pedidos y Órdenes',           breadcrumb: 'ANALYTICS / PEDIDOS'     },
+    graf_compras: { title: 'Compras a Proveedores',       breadcrumb: 'SUPPLY CHAIN / COMPRAS'  }
+  };
+
+  function showCrudLayout(visible) {
+    ['.hero-panel', '.stats-grid', '.management-section'].forEach(sel => {
+      const el = document.querySelector(sel);
+      if (el) el.style.display = visible ? '' : 'none';
+    });
+  }
+
+  function showAnalyticsSection(key) {
+    ANALYTICS_TABS.forEach(tab => {
+      const el = document.getElementById('analytics-section-' + tab);
+      if (el) el.style.display = (tab === key) ? '' : 'none';
+    });
+  }
+
+  async function activateAnalyticsTab(key) {
+    state.activeTab = key;
+    document.querySelectorAll('.nav-item').forEach(btn =>
+      btn.classList.toggle('active', btn.dataset.tab === key)
+    );
+    const meta = ANALYTICS_META[key];
+    const titleEl = document.getElementById('page-title');
+    const bcEl    = document.getElementById('breadcrumbCurrent');
+    if (titleEl) titleEl.textContent = meta.title;
+    if (bcEl)    bcEl.textContent    = meta.breadcrumb;
+    showCrudLayout(false);
+    showAnalyticsSection(key);
+    if (!window.VantageAnalytics) return;
+    if (key === 'graf_ventas')  window.VantageAnalytics.loadVentas();
+    if (key === 'graf_pedidos') window.VantageAnalytics.loadPedidos();
+    if (key === 'graf_compras') window.VantageAnalytics.loadCompras();
+  }
+
   window.switchTab = function switchTab(event, key) {
-    activateTab(key, event, true);
+    if (ANALYTICS_TABS.includes(key)) {
+      activateAnalyticsTab(key);
+    } else {
+      showCrudLayout(true);
+      ANALYTICS_TABS.forEach(tab => {
+        const el = document.getElementById('analytics-section-' + tab);
+        if (el) el.style.display = 'none';
+      });
+      activateTab(key, event, true);
+    }
   };
 
   // Compatibilidad con el nombre de la primera versión.
